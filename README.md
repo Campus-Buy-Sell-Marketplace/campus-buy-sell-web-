@@ -80,4 +80,4 @@ The web application communicates with the **Campus Marketplace Backend** through
 
 Developed as part of the **OJT Semester 3 — Product Development** project.
 
-#COMPLETE PROJECT DOCUMENTATION LINK : https://drive.google.com/file/d/1miNHk4CkprCCCL1-ocQIEOyejaK9Fbui/view?usp=sharing
+COMPLETE PROJECT DOCUMENTATION LINK : https://drive.google.com/file/d/1miNHk4CkprCCCL1-ocQIEOyejaK9Fbui/view?usp=sharing
