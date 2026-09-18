@@ -1,23 +1,6 @@
 import React from 'react';
 
-function App() {
-  return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <h1 style={styles.title}>Campus Marketplace</h1>
-        <p style={styles.subtitle}>Web Application</p>
-        <div style={styles.badge}>🚀 Deployment Active</div>
-        <p style={styles.message}>
-          This is a pre-production deployment.<br />
-          The full application is currently under development.
-        </p>
-        <p style={styles.footer}>OJT Semester 3 — Product Development</p>
-      </div>
-    </div>
-  );
-}
-
-const styles = {
+const styles: { [key: string]: React.CSSProperties } = {
   container: {
     minHeight: '100vh',
     display: 'flex',
@@ -67,5 +50,22 @@ const styles = {
     margin: '0',
   },
 };
+
+function App(): React.JSX.Element {
+  return (
+    <div style={styles.container}>
+      <div style={styles.card}>
+        <h1 style={styles.title}>Campus Marketplace</h1>
+        <p style={styles.subtitle}>Web Application</p>
+        <div style={styles.badge}>🚀 Deployment Active</div>
+        <p style={styles.message}>
+          This is a pre-production deployment.<br />
+          The full application is currently under development.
+        </p>
+        <p style={styles.footer}>OJT Semester 3 — Product Development</p>
+      </div>
+    </div>
+  );
+}
 
 export default App;
