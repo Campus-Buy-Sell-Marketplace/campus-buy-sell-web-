@@ -26,11 +26,7 @@ export const getStoredToken = (): string | null => {
 
 
 
-/** Key used to store the mock user in localStorage. */
 
-
-/** Returns true when mock auth should be used. */
-const isMockMode = (): boolean => false;
 
 // ── Email + Password Login ─────────────────────────────────────────────────
 export const login = async (
@@ -59,7 +55,7 @@ export const getCurrentUser = async (): Promise<User | null> => {
   if (!token) return null;
   try {
     const { data } = await api.get<User>('/auth/me');
-    return data;
+    return (data as any)?.user || data;
   } catch {
     clearToken();
     return null;

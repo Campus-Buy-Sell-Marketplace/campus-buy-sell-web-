@@ -2,8 +2,8 @@
 // LAVSA — Auth Types
 // ============================================================
 
-/** All possible user roles in the system. */
-export type UserRole = 'USER' | 'SELLER' | 'ADMIN' | 'SUPER_ADMIN';
+/** All possible user roles in the system (must match PostgreSQL user_role enum). */
+export type UserRole = 'STUDENT' | 'SELLER' | 'ADMIN' | 'SUPER_ADMIN';
 
 /** The shape of the authenticated user object returned by the backend. */
 export interface User {
