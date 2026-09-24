@@ -15,10 +15,10 @@ The **Campus Marketplace Web** is the web frontend of the Campus Marketplace pla
 
 ## Tech Stack
 
-* **Frontend:** React
+* **Frontend:** React (Create React App)
 * **Backend:** Node.js + Express
-* **Database:** MongoDB
-* **Authentication:** JWT
+* **Database:** PostgreSQL
+* **Authentication:** JWT (stored in localStorage as Bearer token)
 * **Image Storage:** External/Cloud Storage
 * **API:** REST API
 
@@ -56,10 +56,10 @@ npm install
 
 ### 3. Configure Environment
 
-Create a `.env` file and add the backend API URL:
+Creating a `.env` file is optional — `src/config/appConfig.ts` defaults to `http://localhost:5000/api` if the variable is not set.
 
 ```env
-VITE_API_BASE_URL=<backend-api-url>
+REACT_APP_API_BASE_URL=http://localhost:5000/api
 ```
 
 Do not commit `.env` files or sensitive credentials.
@@ -67,12 +67,12 @@ Do not commit `.env` files or sensitive credentials.
 ### 4. Run the Web App
 
 ```bash
-npm run dev
+npm start
 ```
 
 ## Backend
 
-The web application communicates with the **Campus Marketplace Backend** through REST APIs for authentication, listings, users, and other marketplace operations.
+The web application communicates with the **Campus Marketplace Backend** over REST using a JWT (Bearer token) stored in `localStorage` for authentication, listings, users, and other marketplace operations.
 
 ## Project Status
 
