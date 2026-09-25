@@ -10,7 +10,7 @@ import { useAuth } from '../../context/AuthContext';
 
 const SellerOnboardingPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user, isSeller, refreshUser } = useAuth();
+  const { isSeller, refreshUser } = useAuth();
 
   const [form, setForm] = useState({ businessName: '', description: '', contactNumber: '' });
   const [submitting, setSubmitting] = useState(false);
@@ -49,7 +49,7 @@ const SellerOnboardingPage: React.FC = () => {
 
     setSubmitting(true);
     try {
-      const res = await applyAsSeller(form);
+      await applyAsSeller(form);
       setSubmittedSuccess(true);
       await refreshUser();
       // Reload status
