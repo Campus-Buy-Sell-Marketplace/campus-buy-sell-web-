@@ -83,3 +83,23 @@ export const applyAsSeller = async (data: SellerOnboardingData): Promise<{ messa
   const response = await api.post<{ message: string }>('/seller/apply', data);
   return response.data;
 };
+
+export interface SellerApplicationStatusResponse {
+  hasApplied: boolean;
+  application: {
+    id: string;
+    business_name: string;
+    description: string;
+    contact_number: string;
+    status: 'PENDING' | 'APPROVED' | 'REJECTED';
+    admin_notes: string | null;
+    created_at: string;
+    updated_at: string;
+  } | null;
+}
+
+export const fetchSellerApplicationStatus = async (): Promise<SellerApplicationStatusResponse> => {
+  const response = await api.get<SellerApplicationStatusResponse>('/seller/application-status');
+  return response.data;
+};
+
