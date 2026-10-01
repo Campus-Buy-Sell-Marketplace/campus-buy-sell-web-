@@ -48,20 +48,23 @@ const SettingsPage: React.FC = () => {
           </div>
         </section>
 
-        {/* Become a Seller */}
+        {/* Selling */}
         {!isSeller && (
           <section style={sectionStyle}>
-            <h2 style={sectionHeadingStyle}>Seller</h2>
+            <h2 style={sectionHeadingStyle}>Selling</h2>
             <div style={{ padding: '20px' }}>
-              <p style={{ color: '#374151', fontSize: '14px', margin: '0 0 16px 0' }}>
+              <p style={{ color: '#374151', fontSize: '14px', margin: '0 0 8px 0' }}>
                 Want to sell items on LAVSA? Apply to become a seller and start listing products for your campus.
               </p>
+              <p style={{ color: '#9ca3af', fontSize: '12px', margin: '0 0 16px 0' }}>
+                You'll verify your identity and submit a brief application. Admin approval is required.
+              </p>
               <button
-                onClick={() => navigate('/seller/onboarding')}
+                onClick={() => navigate('/seller/sign-in')}
                 style={sellerBtnStyle}
                 id="become-seller-btn"
               >
-                Become a Seller →
+                Start Selling →
               </button>
             </div>
           </section>
@@ -75,9 +78,17 @@ const SettingsPage: React.FC = () => {
                 <div style={{ color: '#065f46', fontWeight: '600', fontSize: '14px' }}>You are an active seller</div>
                 <div style={{ color: '#6b7280', fontSize: '13px', marginTop: '2px' }}>Go to your seller dashboard to manage listings.</div>
               </div>
+              <button
+                onClick={() => navigate('/seller/dashboard')}
+                style={{ ...sellerBtnStyle, marginLeft: 'auto', backgroundColor: '#065f46', borderColor: '#065f46' }}
+                id="go-to-seller-dashboard-btn"
+              >
+                Dashboard →
+              </button>
             </div>
           </section>
         )}
+
       </div>
     </AppLayout>
   );

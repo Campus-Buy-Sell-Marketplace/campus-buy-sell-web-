@@ -7,6 +7,9 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import ProtectedRoute from '../components/ProtectedRoute/ProtectedRoute';
 import { useAuth } from '../context/AuthContext';
 
+// Public Pages
+import LandingPage from '../pages/public/LandingPage';
+
 // Auth Pages
 import LoginPage from '../pages/auth/LoginPage';
 
@@ -17,8 +20,10 @@ import ProductDetailPage from '../pages/buyer/ProductDetailPage';
 import OrdersPage from '../pages/buyer/OrdersPage';
 import ProfilePage from '../pages/buyer/ProfilePage';
 import SettingsPage from '../pages/buyer/SettingsPage';
+import CartPage from '../pages/buyer/CartPage';
 
 // Seller Pages
+import SellerSignInPage from '../pages/seller/SellerSignInPage';
 import SellerDashboardPage from '../pages/seller/SellerDashboardPage';
 import SellerProductsPage from '../pages/seller/SellerProductsPage';
 import SellerOrdersPage from '../pages/seller/SellerOrdersPage';
@@ -42,17 +47,17 @@ const AppRoutes: React.FC = () => {
 
   return (
     <Routes>
-      {/* Root redirect */}
-      <Route
-        path="/"
-        element={<Navigate to={isAuthenticated ? '/home' : '/login'} replace />}
-      />
+      {/* ── Root: public landing page for everyone ── */}
+      <Route path="/" element={<LandingPage />} />
 
       {/* Public Login Route (redirects to home if already logged in) */}
       <Route
         path="/login"
         element={isAuthenticated ? <Navigate to="/home" replace /> : <LoginPage />}
       />
+
+      {/* ── Public product routes (no auth needed) ── */}
+      {/* These redirect to the same pages but inside authenticated layout when logged in */}
 
       {/* ── Buyer / General Routes ── */}
       <Route
@@ -103,8 +108,25 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/cart"
+        element={
+          <ProtectedRoute>
+            <CartPage />
+          </ProtectedRoute>
+        }
+      />
 
       {/* ── Seller Routes ── */}
+      {/* Seller Sign-In — accessible to any authenticated user */}
+      <Route
+        path="/seller/sign-in"
+        element={
+          <ProtectedRoute>
+            <SellerSignInPage />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/seller/onboarding"
         element={

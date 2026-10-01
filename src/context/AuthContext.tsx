@@ -21,6 +21,7 @@ interface AuthContextValue {
   isLoading: boolean;
   role: UserRole | null;
   isSeller: boolean;
+  register: (name: string, email: string, password: string) => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   googleLogin: (googleIdToken: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -49,6 +50,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       }
     };
     restoreSession();
+  }, []);
+
+  // ── Email + Password register ────────────────────────────────────────────
+  const register = useCallback(async (name: string, email: string, password: string) => {
+    const { user: newUser } = await authService.register(name, email, password);
+    setUser(newUser);
   }, []);
 
   // ── Email + Password login ───────────────────────────────────────────────
@@ -81,6 +88,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     isLoading,
     role: user?.role ?? null,
     isSeller: user?.isSeller ?? false,
+    register,
     login,
     googleLogin,
     logout,

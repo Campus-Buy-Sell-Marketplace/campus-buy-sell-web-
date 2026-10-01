@@ -6,6 +6,7 @@ import React from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider } from './context/AuthContext';
+import { CartProvider } from './context/CartContext';
 import AppRoutes from './routes/AppRoutes';
 import IntroAnimation from './components/IntroAnimation/IntroAnimation';
 import { GOOGLE_CLIENT_ID } from './config/appConfig';
@@ -19,8 +20,10 @@ function App(): React.JSX.Element {
     <GoogleOAuthProvider clientId={OAUTH_CLIENT_ID}>
       <BrowserRouter>
         <AuthProvider>
-          <IntroAnimation />
-          <AppRoutes />
+          <CartProvider>
+            <IntroAnimation />
+            <AppRoutes />
+          </CartProvider>
         </AuthProvider>
       </BrowserRouter>
     </GoogleOAuthProvider>
@@ -28,3 +31,4 @@ function App(): React.JSX.Element {
 }
 
 export default App;
+

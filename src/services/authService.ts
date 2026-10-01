@@ -38,6 +38,17 @@ export const login = async (
   return data;
 };
 
+// ── Email + Password Register ──────────────────────────────────────────────
+export const register = async (
+  name: string,
+  email: string,
+  password: string
+): Promise<AuthResponse> => {
+  const { data } = await api.post<AuthResponse>('/auth/register', { name, email, password });
+  saveToken(data.token);
+  return data;
+};
+
 // ── Google OAuth Login ─────────────────────────────────────────────────────
 export const googleLogin = async (
   googleIdToken: string
