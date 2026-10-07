@@ -9,6 +9,7 @@ import AppLayout from '../../components/Layout/AppLayout';
 import { getProductById, Product } from '../../services/productService';
 import { useCart } from '../../context/CartContext';
 import { useToast } from '../../context/ToastContext';
+import { getWishlistIds, addToWishlist, removeFromWishlist } from '../../services/userService';
 
 const CONDITIONS: Record<string, { label: string; color: string; bg: string }> = {
   NEW:      { label: 'New',       color: '#065f46', bg: '#f0fdf4' },
@@ -31,6 +32,8 @@ const ProductDetailPage: React.FC = () => {
   const [quantity, setQuantity] = useState(1);
   const [isAdding, setIsAdding] = useState(false);
   const [added, setAdded] = useState(false);
+  const [isWishlisted, setIsWishlisted] = useState(false);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
 
   // Auto-dismiss action error after 4 seconds
   useEffect(() => {
@@ -48,6 +51,32 @@ const ProductDetailPage: React.FC = () => {
       .catch(() => setError('Product not found or unavailable.'))
       .finally(() => setIsLoading(false));
   }, [id]);
+
+  // Load wishlist state for this product
+  useEffect(() => {
+    if (!id) return;
+    getWishlistIds()
+      .then((ids) => setIsWishlisted(ids.includes(id)))
+      .catch(() => {});
+  }, [id]);
+
+  const handleWishlistToggle = async () => {
+    if (!product || wishlistLoading) return;
+    setWishlistLoading(true);
+    try {
+      if (isWishlisted) {
+        await removeFromWishlist(product.id);
+        setIsWishlisted(false);
+      } else {
+        await addToWishlist(product.id);
+        setIsWishlisted(true);
+      }
+    } catch {
+      alert('Could not update wishlist. Please try again.');
+    } finally {
+      setWishlistLoading(false);
+    }
+  };
 
   const handleAddToCart = async () => {
     if (!product) return;
@@ -249,14 +278,25 @@ const ProductDetailPage: React.FC = () => {
               >
                 {isAdding ? 'Adding...' : added ? '✓ Added to Cart' : '+ Add to Cart'}
               </button>
-              <button
-                onClick={handleBuyNow}
-                disabled={Number(product.stock) === 0}
-                style={buyNowBtnStyle}
-                id="detail-buy-now-btn"
-              >
-                Buy Now →
-              </button>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  onClick={handleBuyNow}
+                  disabled={Number(product.stock) === 0}
+                  style={{ ...buyNowBtnStyle, flex: 1 }}
+                  id="detail-buy-now-btn"
+                >
+                  Buy Now →
+                </button>
+                <button
+                  onClick={handleWishlistToggle}
+                  disabled={wishlistLoading}
+                  style={wishBtnStyle(isWishlisted)}
+                  id="detail-wishlist-btn"
+                  title={isWishlisted ? 'Remove from wishlist' : 'Save to wishlist'}
+                >
+                  {wishlistLoading ? '…' : isWishlisted ? '❤️' : '🤍'}
+                </button>
+              </div>
             </div>
 
             {/* Listed date */}
@@ -277,6 +317,7 @@ const ProductDetailPage: React.FC = () => {
         #detail-add-to-cart-btn:hover:not(:disabled) { opacity: 0.9; }
         #detail-buy-now-btn:hover:not(:disabled) { background-color: #1e3a5f !important; }
         #qty-dec:hover, #qty-inc:hover:not(:disabled) { background-color: #e5e7eb !important; }
+        #detail-wishlist-btn:hover:not(:disabled) { transform: scale(1.1); }
       `}</style>
     </AppLayout>
   );
@@ -411,6 +452,15 @@ const buyNowBtnStyle: React.CSSProperties = {
   cursor: 'pointer', transition: 'background-color 0.2s ease',
   fontFamily: "'Inter', system-ui, sans-serif",
 };
+
+const wishBtnStyle = (active: boolean): React.CSSProperties => ({
+  padding: '14px 18px', borderRadius: '10px',
+  border: `1.5px solid ${active ? '#ef4444' : '#e5e7eb'}`,
+  backgroundColor: active ? '#fef2f2' : '#f9fafb',
+  fontSize: '18px', cursor: 'pointer',
+  transition: 'all 0.2s ease', flexShrink: 0,
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+});
 
 const listedStyle: React.CSSProperties = {
   fontSize: '12px', color: '#9ca3af', margin: 0,

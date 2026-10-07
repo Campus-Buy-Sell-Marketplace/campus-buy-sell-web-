@@ -21,6 +21,7 @@ import OrdersPage from '../pages/buyer/OrdersPage';
 import ProfilePage from '../pages/buyer/ProfilePage';
 import SettingsPage from '../pages/buyer/SettingsPage';
 import CartPage from '../pages/buyer/CartPage';
+import WishlistPage from '../pages/buyer/WishlistPage';
 
 // Seller Pages
 import SellerSignInPage from '../pages/seller/SellerSignInPage';
@@ -113,6 +114,14 @@ const AppRoutes: React.FC = () => {
         element={
           <ProtectedRoute>
             <CartPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/wishlist"
+        element={
+          <ProtectedRoute>
+            <WishlistPage />
           </ProtectedRoute>
         }
       />

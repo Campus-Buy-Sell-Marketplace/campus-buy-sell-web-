@@ -188,6 +188,7 @@ function buildNavLinks(role: string | null, isSeller: boolean): NavItem[] {
   const buyer: NavItem[] = [
     { to: '/home',     label: 'Home',      icon: '🏠' },
     { to: '/products', label: 'Products',  icon: '🛍️' },
+    { to: '/wishlist', label: 'Wishlist',  icon: '❤️' },
     { to: '/orders',   label: 'My Orders', icon: '📦' },
   ];
   const seller: NavItem[] = [
