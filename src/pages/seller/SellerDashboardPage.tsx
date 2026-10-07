@@ -35,8 +35,16 @@ const SellerDashboardPage: React.FC = () => {
   return (
     <AppLayout>
       <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-        <h1 style={headingStyle}>Seller Dashboard</h1>
-        <p style={subStyle}>Welcome back, {user?.name}. Here is an overview of your store.</p>
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
+          <div>
+            <h1 style={headingStyle}>Seller Dashboard</h1>
+            <p style={subStyle}>Welcome back, {user?.name}. Here is an overview of your store.</p>
+          </div>
+          <Link to="/seller/products" style={addProductBtnStyle} id="dashboard-add-product-btn">
+            + Add Product
+          </Link>
+        </div>
 
         {/* Stats */}
         <div style={gridStyle}>
@@ -55,6 +63,11 @@ const SellerDashboardPage: React.FC = () => {
         <div style={quickLinksStyle}>
           <h2 style={cardHeadingStyle}>Quick Actions</h2>
           <div style={quickLinksGridStyle}>
+            <Link to="/seller/products" style={{ ...quickLinkCardStyle, borderColor: '#111827' }} id="ql-add-product">
+              <span style={{ fontSize: '28px' }}>➕</span>
+              <div style={{ fontWeight: '700', color: '#111827', marginTop: '8px' }}>Add Product</div>
+              <div style={{ color: '#9ca3af', fontSize: '12px', marginTop: '4px' }}>List a new item for sale</div>
+            </Link>
             <Link to="/seller/products" style={quickLinkCardStyle} id="ql-my-listings">
               <span style={{ fontSize: '28px' }}>🏷️</span>
               <div style={{ fontWeight: '600', color: '#111827', marginTop: '8px' }}>My Listings</div>
