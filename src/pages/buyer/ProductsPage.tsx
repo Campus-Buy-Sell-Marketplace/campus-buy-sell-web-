@@ -8,6 +8,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import AppLayout from '../../components/Layout/AppLayout';
 import { getProducts, Product } from '../../services/productService';
 import { useCart } from '../../context/CartContext';
+import { useToast } from '../../context/ToastContext';
 
 const CATEGORIES = ['All', 'Electronics', 'Books', 'Clothing', 'Furniture', 'Sports', 'Other'];
 const CONDITIONS: Record<string, string> = {
@@ -21,6 +22,7 @@ const CONDITIONS: Record<string, string> = {
 const ProductsPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { addToCart } = useCart();
+  const { showToast } = useToast();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -31,6 +33,14 @@ const ProductsPage: React.FC = () => {
   const [addingId, setAddingId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [addedId, setAddedId] = useState<string | null>(null);
+
+  // Auto-dismiss error after 4 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(''), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
 
   const fetchProducts = useCallback(async () => {
     setIsLoading(true);
@@ -68,7 +78,12 @@ const ProductsPage: React.FC = () => {
     try {
       await addToCart(productId, 1);
       setAddedId(productId);
+      const prod = products.find((p) => p.id === productId);
+      showToast(`Added "${prod?.title || 'Product'}" to cart!`, 'success');
       setTimeout(() => setAddedId(null), 1500);
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Failed to add item to cart.';
+      showToast(msg, 'warning');
     } finally {
       setAddingId(null);
     }

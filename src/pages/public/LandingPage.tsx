@@ -10,6 +10,7 @@ import PublicNavbar from '../../components/PublicNavbar/PublicNavbar';
 import { getProducts, Product } from '../../services/productService';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
 import { APP_NAME, APP_TAGLINE } from '../../config/appConfig';
 
 const CATEGORIES = ['All', 'Electronics', 'Books', 'Clothing', 'Furniture', 'Sports', 'Other'];
@@ -17,6 +18,7 @@ const CATEGORIES = ['All', 'Electronics', 'Books', 'Clothing', 'Furniture', 'Spo
 const LandingPage: React.FC = () => {
   const { isAuthenticated } = useAuth();
   const { addToCart } = useCart();
+  const { showToast } = useToast();
   const navigate = useNavigate();
 
   const [products, setProducts] = useState<Product[]>([]);
@@ -25,6 +27,14 @@ const LandingPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [addingId, setAddingId] = useState<string | null>(null);
   const [error, setError] = useState('');
+
+  // Auto-dismiss error after 4 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(''), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
 
   const fetchProducts = useCallback(async () => {
     setIsLoading(true);
@@ -55,6 +65,11 @@ const LandingPage: React.FC = () => {
     setAddingId(productId);
     try {
       await addToCart(productId, 1);
+      const prod = products.find((p) => p.id === productId);
+      showToast(`Added "${prod?.title || 'Product'}" to cart!`, 'success');
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Failed to add item to cart.';
+      showToast(msg, 'warning');
     } finally {
       setAddingId(null);
     }

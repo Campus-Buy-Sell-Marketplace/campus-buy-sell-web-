@@ -28,6 +28,14 @@ const OrdersPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // Auto-dismiss error after 4 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(''), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
   useEffect(() => {
     api
       .get<{ orders: Order[] }>('/orders')
@@ -50,7 +58,21 @@ const OrdersPage: React.FC = () => {
         )}
 
         {error && (
-          <div style={errorStyle}>⚠️ {error}</div>
+          <div style={{
+            ...errorStyle,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}>
+            <span>⚠️ {error}</span>
+            <button
+              onClick={() => setError('')}
+              style={{ background: 'none', border: 'none', color: '#991b1b', cursor: 'pointer', fontWeight: 'bold' }}
+              aria-label="Dismiss error"
+            >
+              ✕
+            </button>
+          </div>
         )}
 
         {!isLoading && !error && orders.length === 0 && (

@@ -8,6 +8,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import AppLayout from '../../components/Layout/AppLayout';
 import { getProductById, Product } from '../../services/productService';
 import { useCart } from '../../context/CartContext';
+import { useToast } from '../../context/ToastContext';
 
 const CONDITIONS: Record<string, { label: string; color: string; bg: string }> = {
   NEW:      { label: 'New',       color: '#065f46', bg: '#f0fdf4' },
@@ -20,14 +21,24 @@ const CONDITIONS: Record<string, { label: string; color: string; bg: string }> =
 const ProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { addToCart } = useCart();
+  const { showToast } = useToast();
   const navigate = useNavigate();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [actionError, setActionError] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [isAdding, setIsAdding] = useState(false);
   const [added, setAdded] = useState(false);
+
+  // Auto-dismiss action error after 4 seconds
+  useEffect(() => {
+    if (actionError) {
+      const timer = setTimeout(() => setActionError(''), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [actionError]);
 
   useEffect(() => {
     if (!id) return;
@@ -40,11 +51,17 @@ const ProductDetailPage: React.FC = () => {
 
   const handleAddToCart = async () => {
     if (!product) return;
+    setActionError('');
     setIsAdding(true);
     try {
       await addToCart(product.id, quantity);
       setAdded(true);
+      showToast(`Added ${quantity} × "${product.title}" to cart!`, 'success');
       setTimeout(() => setAdded(false), 2000);
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Failed to add item to cart.';
+      setActionError(msg);
+      showToast(msg, 'warning');
     } finally {
       setIsAdding(false);
     }
@@ -52,8 +69,19 @@ const ProductDetailPage: React.FC = () => {
 
   const handleBuyNow = async () => {
     if (!product) return;
-    await addToCart(product.id, quantity);
-    navigate('/cart');
+    setActionError('');
+    try {
+      await addToCart(product.id, quantity);
+      navigate('/cart');
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Failed to add item to cart.';
+      setActionError(msg);
+      showToast(msg, 'warning');
+      // If error is because it's already in cart, navigate to cart anyway
+      if (err?.response?.status === 409) {
+        navigate('/cart');
+      }
+    }
   };
 
   if (isLoading) {
@@ -187,6 +215,24 @@ const ProductDetailPage: React.FC = () => {
                     +
                   </button>
                 </div>
+              </div>
+            )}
+
+            {/* Error banner if any */}
+            {actionError && (
+              <div style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '10px 14px', borderRadius: '8px', backgroundColor: '#fef2f2',
+                border: '1px solid #fecaca', color: '#991b1b', fontSize: '13px', marginBottom: '14px',
+              }}>
+                <span>⚠️ {actionError}</span>
+                <button
+                  onClick={() => setActionError('')}
+                  style={{ background: 'none', border: 'none', color: '#991b1b', cursor: 'pointer', fontWeight: 'bold' }}
+                  aria-label="Dismiss error"
+                >
+                  ✕
+                </button>
               </div>
             )}
 

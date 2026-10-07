@@ -4,6 +4,8 @@
 
 import React, { useEffect, useState } from 'react';
 import AppLayout from '../../components/Layout/AppLayout';
+import ConfirmModal from '../../components/ConfirmModal/ConfirmModal';
+import { useToast } from '../../context/ToastContext';
 import {
   fetchUsers,
   updateUserRole,
@@ -27,6 +29,7 @@ const STATUS_COLORS: Record<string, { bg: string; text: string; border: string }
 };
 
 const AdminUsersPage: React.FC = () => {
+  const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<'applications' | 'users'>('applications');
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [applications, setApplications] = useState<SellerApplication[]>([]);
@@ -35,6 +38,15 @@ const AdminUsersPage: React.FC = () => {
   const [search, setSearch] = useState('');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL');
+  const [rejectingAppId, setRejectingAppId] = useState<string | null>(null);
+
+  // Auto-dismiss error after 4 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(''), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
 
   const loadData = async () => {
     try {
@@ -71,25 +83,19 @@ const AdminUsersPage: React.FC = () => {
     try {
       const updated = await updateUserRole(user.id, newRole);
       setUsers((prev) => prev.map((u) => (u.id === updated.id ? { ...u, role: updated.role } : u)));
+      showToast(`Role updated to ${newRole} for ${user.name}.`, 'success');
       // Also refresh applications list if affected
       const apps = await fetchSellerApplications();
       setApplications(apps);
     } catch {
-      alert('Failed to update role. Please try again.');
+      showToast('Failed to update role. Please try again.', 'error');
     } finally {
       setUpdatingId(null);
     }
   };
 
   // Handle application decision (Approve or Reject)
-  const handleApplicationDecision = async (appId: string, status: 'APPROVED' | 'REJECTED') => {
-    let notes: string | undefined = undefined;
-    if (status === 'REJECTED') {
-      const promptNotes = window.prompt('Optional: Reason for rejecting this seller application:');
-      if (promptNotes === null) return; // User cancelled prompt
-      notes = promptNotes.trim() || undefined;
-    }
-
+  const handleApplicationDecision = async (appId: string, status: 'APPROVED' | 'REJECTED', notes?: string) => {
     setUpdatingId(appId);
     try {
       const updatedApp = await updateSellerApplicationStatus(appId, status, notes);
@@ -99,10 +105,12 @@ const AdminUsersPage: React.FC = () => {
       // Reload users to reflect new role immediately
       const updatedUsers = await fetchUsers();
       setUsers(updatedUsers);
+      showToast(`Application ${status.toLowerCase()} successfully.`, 'success');
     } catch (err) {
-      alert('Failed to update application status.');
+      showToast('Failed to update application status.', 'error');
     } finally {
       setUpdatingId(null);
+      setRejectingAppId(null);
     }
   };
 
@@ -248,7 +256,7 @@ const AdminUsersPage: React.FC = () => {
                               <button
                                 style={rejectBtnStyle}
                                 disabled={isUpdating}
-                                onClick={() => handleApplicationDecision(app.id, 'REJECTED')}
+                                onClick={() => setRejectingAppId(app.id)}
                               >
                                 {isUpdating ? '…' : '❌ Reject'}
                               </button>
@@ -259,7 +267,7 @@ const AdminUsersPage: React.FC = () => {
                             <button
                               style={revokeBtnStyle}
                               disabled={isUpdating}
-                              onClick={() => handleApplicationDecision(app.id, 'REJECTED')}
+                              onClick={() => setRejectingAppId(app.id)}
                             >
                               {isUpdating ? '…' : 'Revoke Seller'}
                             </button>
@@ -384,6 +392,24 @@ const AdminUsersPage: React.FC = () => {
             )}
           </div>
         )}
+
+        {/* In-Website Rejection Reason Modal */}
+        <ConfirmModal
+          isOpen={!!rejectingAppId}
+          title="Reject / Revoke Application"
+          message="Provide optional feedback or reason for rejecting/revoking this seller application:"
+          confirmLabel="Confirm Decision"
+          cancelLabel="Cancel"
+          isDanger={true}
+          requireInput={true}
+          inputPlaceholder="e.g. Incomplete description or duplicate listing"
+          onConfirm={(notes) => {
+            if (rejectingAppId) {
+              handleApplicationDecision(rejectingAppId, 'REJECTED', notes);
+            }
+          }}
+          onCancel={() => setRejectingAppId(null)}
+        />
       </div>
     </AppLayout>
   );

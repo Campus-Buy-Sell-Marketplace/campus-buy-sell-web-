@@ -2,7 +2,7 @@
 // LAVSA — Login / Register Page  (clean white theme)
 // ============================================================
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { GoogleLogin, CredentialResponse } from '@react-oauth/google';
 import { useAuth } from '../../context/AuthContext';
@@ -24,6 +24,14 @@ const LoginPage: React.FC = () => {
   const [error, setError]           = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  // Auto-dismiss error after 5 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(''), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
 
   // ── Redirect destination after auth ──────────────────────────────────────
   const from = (location.state as { from?: Location })?.from?.pathname;

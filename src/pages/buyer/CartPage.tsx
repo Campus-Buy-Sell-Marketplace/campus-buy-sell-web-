@@ -3,30 +3,42 @@
 // Shows the user's cart, persisted in backend per user.
 // ============================================================
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AppLayout from '../../components/Layout/AppLayout';
 import { useCart } from '../../context/CartContext';
+import { useToast } from '../../context/ToastContext';
 import api from '../../services/api';
 
 const CartPage: React.FC = () => {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const { items, totalCount, totalPrice, isLoading, removeFromCart, updateQuantity, clearCart, refreshCart } =
     useCart();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [checkoutError, setCheckoutError] = useState('');
 
+  // Auto-dismiss checkout error after 4.5 seconds
+  useEffect(() => {
+    if (checkoutError) {
+      const timer = setTimeout(() => setCheckoutError(''), 4500);
+      return () => clearTimeout(timer);
+    }
+  }, [checkoutError]);
+
   const handleCheckout = async () => {
     setCheckoutError('');
     setIsCheckingOut(true);
     try {
-      const res = await api.post<{ order: { orderId: string } }>('/orders/checkout', {});
+      await api.post<{ order: { orderId: string } }>('/orders/checkout', {});
+      showToast('🎉 Order placed successfully!', 'success');
       // Cart is cleared by the backend; refresh context then navigate
       if (typeof refreshCart === 'function') await refreshCart();
       navigate('/orders');
     } catch (err: any) {
       const msg = err?.response?.data?.message || 'Checkout failed. Please try again.';
       setCheckoutError(msg);
+      showToast(msg, 'error');
     } finally {
       setIsCheckingOut(false);
     }
@@ -153,10 +165,18 @@ const CartPage: React.FC = () => {
 
               {checkoutError && (
                 <div style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                   padding: '10px 12px', borderRadius: '8px', backgroundColor: '#fef2f2',
                   border: '1px solid #fecaca', color: '#991b1b', fontSize: '13px', marginBottom: '12px',
                 }}>
-                  ⚠️ {checkoutError}
+                  <span>⚠️ {checkoutError}</span>
+                  <button
+                    onClick={() => setCheckoutError('')}
+                    style={{ background: 'none', border: 'none', color: '#991b1b', cursor: 'pointer', fontWeight: 'bold' }}
+                    aria-label="Dismiss error"
+                  >
+                    ✕
+                  </button>
                 </div>
               )}
               <button

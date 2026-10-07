@@ -4,6 +4,8 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import AppLayout from '../../components/Layout/AppLayout';
+import ConfirmModal from '../../components/ConfirmModal/ConfirmModal';
+import { useToast } from '../../context/ToastContext';
 import {
   getMyProducts,
   createProduct,
@@ -36,6 +38,7 @@ const emptyForm: ProductForm = {
 };
 
 const SellerProductsPage: React.FC = () => {
+  const { showToast } = useToast();
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -44,6 +47,22 @@ const SellerProductsPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+
+  // Auto-dismiss alerts after 4 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(''), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
+  useEffect(() => {
+    if (successMsg) {
+      const timer = setTimeout(() => setSuccessMsg(''), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMsg]);
 
   const fetchMyProducts = useCallback(async () => {
     setIsLoading(true);
@@ -108,30 +127,46 @@ const SellerProductsPage: React.FC = () => {
 
       if (editingId) {
         await updateProduct(editingId, payload);
-        setSuccessMsg('Product updated!');
+        const msg = 'Product updated!';
+        setSuccessMsg(msg);
+        showToast(msg, 'success');
       } else {
         await createProduct(payload);
-        setSuccessMsg('Product listed successfully!');
+        const msg = 'Product listed successfully!';
+        setSuccessMsg(msg);
+        showToast(msg, 'success');
       }
 
       setShowForm(false);
       setEditingId(null);
       fetchMyProducts();
     } catch (err: any) {
-      setError(err?.response?.data?.message || 'Failed to save product.');
+      const msg = err?.response?.data?.message || 'Failed to save product.';
+      setError(msg);
+      showToast(msg, 'error');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Delete this product? This cannot be undone.')) return;
+  const promptDelete = (product: Product) => {
+    setProductToDelete(product);
+  };
+
+  const confirmDelete = async () => {
+    if (!productToDelete) return;
     try {
-      await deleteProduct(id);
-      setProducts((prev) => prev.filter((p) => p.id !== id));
-      setSuccessMsg('Product deleted.');
-    } catch {
-      setError('Failed to delete product.');
+      await deleteProduct(productToDelete.id);
+      setProducts((prev) => prev.filter((p) => p.id !== productToDelete.id));
+      const msg = `"${productToDelete.title}" deleted.`;
+      setSuccessMsg(msg);
+      showToast(msg, 'success');
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Failed to delete product.';
+      setError(msg);
+      showToast(msg, 'error');
+    } finally {
+      setProductToDelete(null);
     }
   };
 
@@ -141,8 +176,14 @@ const SellerProductsPage: React.FC = () => {
       setProducts((prev) =>
         prev.map((p) => (p.id === product.id ? { ...p, is_active: !p.is_active } : p))
       );
+      showToast(
+        product.is_active ? `"${product.title}" is now hidden.` : `"${product.title}" is now active.`,
+        'info'
+      );
     } catch {
-      setError('Failed to update listing status.');
+      const msg = 'Failed to update listing status.';
+      setError(msg);
+      showToast(msg, 'error');
     }
   };
 
@@ -402,7 +443,7 @@ const SellerProductsPage: React.FC = () => {
                           Edit
                         </button>
                         <button
-                          onClick={() => handleDelete(product.id)}
+                          onClick={() => promptDelete(product)}
                           style={deleteBtnStyle}
                           id={`delete-product-${product.id}`}
                         >
@@ -416,6 +457,18 @@ const SellerProductsPage: React.FC = () => {
             </table>
           </div>
         )}
+
+        {/* In-Website Confirmation Modal for Deletion */}
+        <ConfirmModal
+          isOpen={!!productToDelete}
+          title="Delete Listing"
+          message={`Are you sure you want to delete "${productToDelete?.title}"? This listing will be permanently removed.`}
+          confirmLabel="Delete Listing"
+          cancelLabel="Keep Listing"
+          isDanger={true}
+          onConfirm={confirmDelete}
+          onCancel={() => setProductToDelete(null)}
+        />
       </div>
 
       <style>{`
