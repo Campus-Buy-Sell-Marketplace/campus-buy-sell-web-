@@ -8,6 +8,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import AppLayout from '../../components/Layout/AppLayout';
 import { getProducts, Product } from '../../services/productService';
 import { useCart } from '../../context/CartContext';
+import { getWishlistIds, addToWishlist, removeFromWishlist } from '../../services/userService';
 
 const CATEGORIES = ['All', 'Electronics', 'Books', 'Clothing', 'Furniture', 'Sports', 'Other'];
 const CONDITIONS: Record<string, string> = {
@@ -31,6 +32,13 @@ const ProductsPage: React.FC = () => {
   const [addingId, setAddingId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [addedId, setAddedId] = useState<string | null>(null);
+  const [wishlistIds, setWishlistIds] = useState<Set<string>>(new Set());
+  const [togglingWishId, setTogglingWishId] = useState<string | null>(null);
+
+  // Load wishlist IDs once on mount
+  useEffect(() => {
+    getWishlistIds().then((ids) => setWishlistIds(new Set(ids))).catch(() => {});
+  }, []);
 
   const fetchProducts = useCallback(async () => {
     setIsLoading(true);
@@ -71,6 +79,25 @@ const ProductsPage: React.FC = () => {
       setTimeout(() => setAddedId(null), 1500);
     } finally {
       setAddingId(null);
+    }
+  };
+
+  const handleWishlistToggle = async (e: React.MouseEvent, productId: string) => {
+    e.preventDefault();
+    if (togglingWishId === productId) return;
+    setTogglingWishId(productId);
+    try {
+      if (wishlistIds.has(productId)) {
+        await removeFromWishlist(productId);
+        setWishlistIds((prev) => { const s = new Set(prev); s.delete(productId); return s; });
+      } else {
+        await addToWishlist(productId);
+        setWishlistIds((prev) => new Set(prev).add(productId));
+      }
+    } catch {
+      // silently ignore
+    } finally {
+      setTogglingWishId(null);
     }
   };
 
@@ -162,6 +189,16 @@ const ProductsPage: React.FC = () => {
                       {product.condition.replace('_', ' ')}
                     </span>
                   )}
+                  {/* Wishlist heart */}
+                  <button
+                    onClick={(e) => handleWishlistToggle(e, product.id)}
+                    style={heartBtnStyle}
+                    disabled={togglingWishId === product.id}
+                    id={`wish-${product.id}`}
+                    title={wishlistIds.has(product.id) ? 'Remove from wishlist' : 'Save to wishlist'}
+                  >
+                    {togglingWishId === product.id ? '…' : wishlistIds.has(product.id) ? '❤️' : '🤍'}
+                  </button>
                 </div>
                 <div style={cardBodyStyle}>
                   <div style={cardCatStyle}>{product.category || 'General'}</div>
@@ -302,6 +339,16 @@ const cartBtnStyle: React.CSSProperties = {
   padding: '6px 12px', borderRadius: '6px', border: 'none', color: '#ffffff',
   fontSize: '12px', fontWeight: '600', cursor: 'pointer',
   transition: 'background-color 0.15s ease', fontFamily: "'Inter', system-ui, sans-serif", flexShrink: 0,
+};
+
+const heartBtnStyle: React.CSSProperties = {
+  position: 'absolute', top: '8px', right: '8px',
+  width: '30px', height: '30px', borderRadius: '50%',
+  border: 'none', backgroundColor: 'rgba(255,255,255,0.9)',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  fontSize: '14px', cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
+  transition: 'transform 0.15s ease',
+  zIndex: 1,
 };
 
 export default ProductsPage;

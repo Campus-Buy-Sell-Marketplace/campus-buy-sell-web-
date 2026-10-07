@@ -1,16 +1,46 @@
 // ============================================================
 // LAVSA — Settings Page — Light Theme
+// Persists notification preference to backend.
 // ============================================================
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppLayout from '../../components/Layout/AppLayout';
 import { useAuth } from '../../context/AuthContext';
+import { getPreferences, savePreferences } from '../../services/userService';
 
 const SettingsPage: React.FC = () => {
   const { user, isSeller } = useAuth();
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  // Load preferences from backend on mount
+  useEffect(() => {
+    getPreferences()
+      .then((prefs) => setNotifications(prefs.email_notifications))
+      .catch(() => {}) // fallback to default true
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleToggle = async () => {
+    const newVal = !notifications;
+    setNotifications(newVal);
+    setSaving(true);
+    setSaved(false);
+    try {
+      await savePreferences({ email_notifications: newVal });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch {
+      // Revert on error
+      setNotifications(!newVal);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <AppLayout>
@@ -37,14 +67,25 @@ const SettingsPage: React.FC = () => {
           <div style={{ ...infoRowStyle, borderBottom: 'none' }}>
             <div>
               <div style={labelStyle}>Email Notifications</div>
-              <div style={{ color: '#9ca3af', fontSize: '12px', marginTop: '2px' }}>Receive order updates by email</div>
+              <div style={{ color: '#9ca3af', fontSize: '12px', marginTop: '2px' }}>
+                Receive order updates by email
+              </div>
             </div>
-            <button
-              onClick={() => setNotifications(v => !v)}
-              style={toggleStyle(notifications)}
-            >
-              <div style={toggleKnobStyle(notifications)} />
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {saving && <span style={{ fontSize: '11px', color: '#9ca3af' }}>Saving…</span>}
+              {saved && !saving && (
+                <span style={{ fontSize: '11px', color: '#059669', fontWeight: '600' }}>✓ Saved</span>
+              )}
+              <button
+                onClick={handleToggle}
+                style={toggleStyle(notifications)}
+                disabled={loading || saving}
+                id="notifications-toggle"
+                title={notifications ? 'Disable email notifications' : 'Enable email notifications'}
+              >
+                <div style={toggleKnobStyle(notifications)} />
+              </button>
+            </div>
           </div>
         </section>
 
@@ -89,6 +130,9 @@ const SettingsPage: React.FC = () => {
           </section>
         )}
 
+        <style>{`
+          #notifications-toggle:hover:not(:disabled) { opacity: 0.85; }
+        `}</style>
       </div>
     </AppLayout>
   );
@@ -124,8 +168,9 @@ const toggleStyle = (on: boolean): React.CSSProperties => ({
   display: 'flex', alignItems: 'center',
   transition: 'background-color 0.2s ease', flexShrink: 0,
   justifyContent: on ? 'flex-end' : 'flex-start',
+  opacity: 1,
 });
-const toggleKnobStyle = (on: boolean): React.CSSProperties => ({
+const toggleKnobStyle = (_on: boolean): React.CSSProperties => ({
   width: '18px', height: '18px', borderRadius: '50%',
   backgroundColor: '#ffffff',
   boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
