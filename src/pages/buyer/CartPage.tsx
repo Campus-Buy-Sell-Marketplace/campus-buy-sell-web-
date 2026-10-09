@@ -358,9 +358,45 @@ const CartPage: React.FC = () => {
               Total: <strong>₹{Number(completedOrder.totalAmount).toFixed(2)}</strong>
             </div>
 
-            <button id="otp-done-btn" onClick={handleOtpDismiss} style={otpDoneBtn}>
-              Got it — View My Orders
-            </button>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
+              <button
+                id="otp-chat-btn"
+                onClick={() => {
+                  const id = completedOrder.orderId;
+                  setCompletedOrder(null);
+                  navigate(`/chat/${id}`);
+                }}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  borderRadius: '8px',
+                  backgroundColor: '#4f46e5',
+                  color: '#ffffff',
+                  border: 'none',
+                  fontSize: '13px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                }}
+              >
+                💬 Chat with Seller
+              </button>
+              <button
+                id="otp-done-btn"
+                onClick={handleOtpDismiss}
+                style={{
+                  ...otpDoneBtn,
+                  flex: 1,
+                  margin: 0,
+                  fontSize: '13px',
+                }}
+              >
+                View My Orders
+              </button>
+            </div>
           </div>
         </div>
       )}

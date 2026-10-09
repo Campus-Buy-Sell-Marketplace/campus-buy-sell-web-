@@ -22,6 +22,7 @@ import ProfilePage from '../pages/buyer/ProfilePage';
 import SettingsPage from '../pages/buyer/SettingsPage';
 import CartPage from '../pages/buyer/CartPage';
 import WishlistPage from '../pages/buyer/WishlistPage';
+import ChatPage from '../pages/buyer/ChatPage';
 
 // Seller Pages
 import SellerSignInPage from '../pages/seller/SellerSignInPage';
@@ -122,6 +123,14 @@ const AppRoutes: React.FC = () => {
         element={
           <ProtectedRoute>
             <WishlistPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/chat/:orderId"
+        element={
+          <ProtectedRoute>
+            <ChatPage />
           </ProtectedRoute>
         }
       />

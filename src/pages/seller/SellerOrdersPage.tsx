@@ -5,6 +5,7 @@
 // ============================================================
 
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AppLayout from '../../components/Layout/AppLayout';
 import api from '../../services/api';
 
@@ -40,6 +41,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }
 };
 
 const SellerOrdersPage: React.FC = () => {
+  const navigate = useNavigate();
   const [orders, setOrders] = useState<SellerOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -246,6 +248,17 @@ const SellerOrdersPage: React.FC = () => {
                 {order.status === 'COMPLETED' && !otpSuccess[order.id] && (
                   <div style={completedNoteStyle}>✅ Delivery confirmed. OTP was verified.</div>
                 )}
+
+                {/* Chat button */}
+                <div style={{ marginTop: '12px', textAlign: 'right' }}>
+                  <button
+                    id={`chat-order-${order.id}`}
+                    onClick={() => navigate(`/chat/${order.id}`)}
+                    style={chatBtnStyle}
+                  >
+                    💬 Chat with Buyer
+                  </button>
+                </div>
               </div>
             );
           })}
@@ -289,5 +302,6 @@ const verifyBtnStyle = (disabled: boolean): React.CSSProperties => ({
 const otpErrStyle: React.CSSProperties = { fontSize: '12px', color: '#991b1b', margin: '8px 0 0 0' };
 const successNoteStyle: React.CSSProperties = { marginTop: '12px', padding: '10px 12px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', fontSize: '13px', color: '#065f46' };
 const completedNoteStyle: React.CSSProperties = { marginTop: '12px', padding: '10px 12px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', fontSize: '13px', color: '#065f46' };
+const chatBtnStyle: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', borderRadius: '8px', backgroundColor: '#4f46e5', color: '#ffffff', border: 'none', fontSize: '13px', fontWeight: '600', cursor: 'pointer', transition: 'background-color 0.15s ease' };
 
 export default SellerOrdersPage;

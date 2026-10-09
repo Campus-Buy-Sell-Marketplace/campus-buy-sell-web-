@@ -5,7 +5,7 @@
 // ============================================================
 
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import AppLayout from '../../components/Layout/AppLayout';
 import api from '../../services/api';
 
@@ -41,6 +41,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }
 };
 
 const OrdersPage: React.FC = () => {
+  const navigate = useNavigate();
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -219,6 +220,17 @@ const OrdersPage: React.FC = () => {
                 {order.status === 'COMPLETED' && (
                   <div style={completedNoteStyle}>✅ Delivery confirmed. OTP was verified by the seller.</div>
                 )}
+
+                {/* Chat button — available for active/completed orders */}
+                <div style={{ marginTop: '12px', textAlign: 'right' }}>
+                  <button
+                    id={`chat-order-${order.id}`}
+                    onClick={() => navigate(`/chat/${order.id}`)}
+                    style={chatBtnStyle}
+                  >
+                    💬 Chat with Seller
+                  </button>
+                </div>
               </div>
             );
           })}
@@ -258,5 +270,6 @@ const otpDigitsRow: React.CSSProperties = { display: 'flex', gap: '6px', marginB
 const otpDigitStyle: React.CSSProperties = { width: '38px', height: '48px', borderRadius: '8px', backgroundColor: '#111827', color: '#ffffff', fontSize: '20px', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center' };
 const otpNoteStyle: React.CSSProperties = { fontSize: '11px', color: '#92400e', margin: 0 };
 const completedNoteStyle: React.CSSProperties = { marginTop: '12px', padding: '10px 12px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', fontSize: '13px', color: '#065f46' };
+const chatBtnStyle: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', borderRadius: '8px', backgroundColor: '#4f46e5', color: '#ffffff', border: 'none', fontSize: '13px', fontWeight: '600', cursor: 'pointer', transition: 'background-color 0.15s ease' };
 
 export default OrdersPage;
