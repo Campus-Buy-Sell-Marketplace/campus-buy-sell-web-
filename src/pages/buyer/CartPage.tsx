@@ -177,28 +177,48 @@ const CartPage: React.FC = () => {
 
               {/* Payment method selector */}
               <div style={paymentSectionStyle}>
-                <p style={paymentLabelStyle}>Payment Method</p>
-                <div style={paymentToggleStyle}>
-                  <button
+                <p style={paymentLabelStyle}>Select Payment Method</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '10px' }}>
+                  {/* Option 1: Cash at Meetup */}
+                  <div
                     id="pay-offline-btn"
                     onClick={() => setPaymentMethod('OFFLINE')}
-                    style={payMethodBtnStyle(paymentMethod === 'OFFLINE')}
+                    style={payMethodCardStyle(paymentMethod === 'OFFLINE')}
                   >
-                    💵 Pay Cash at Meetup
-                  </button>
-                  <button
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span style={{ fontSize: '16px' }}>{paymentMethod === 'OFFLINE' ? '🔘' : '⚪'}</span>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '13px', fontWeight: '700', color: '#111827' }}>💵 Cash at Campus Meetup</span>
+                          <span style={{ fontSize: '10px', fontWeight: '600', backgroundColor: '#dcfce7', color: '#15803d', padding: '2px 6px', borderRadius: '4px' }}>Recommended</span>
+                        </div>
+                        <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>
+                          Pay cash upon receiving item · Verify with 6-digit OTP
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Option 2: Pay Online */}
+                  <div
                     id="pay-online-btn"
                     onClick={() => setPaymentMethod('ONLINE')}
-                    style={payMethodBtnStyle(paymentMethod === 'ONLINE')}
+                    style={payMethodCardStyle(paymentMethod === 'ONLINE')}
                   >
-                    💳 Pay Online
-                  </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span style={{ fontSize: '16px' }}>{paymentMethod === 'ONLINE' ? '🔘' : '⚪'}</span>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '13px', fontWeight: '700', color: '#111827' }}>💳 Pay Online</span>
+                          <span style={{ fontSize: '10px', fontWeight: '600', backgroundColor: '#fef3c7', color: '#b45309', padding: '2px 6px', borderRadius: '4px' }}>Coming Soon</span>
+                        </div>
+                        <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>
+                          Cards, UPI & Net Banking
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <p style={paymentHintStyle}>
-                  {paymentMethod === 'OFFLINE'
-                    ? '📍 Meet the seller on campus and pay cash. Show your OTP after receiving the item.'
-                    : '🔒 Online payment support coming soon. OTP still confirms delivery.'}
-                </p>
               </div>
 
               {checkoutError && (
@@ -220,7 +240,11 @@ const CartPage: React.FC = () => {
                 onClick={handleCheckout}
                 disabled={isCheckingOut}
               >
-                {isCheckingOut ? 'Placing Order…' : 'Place Order →'}
+                {isCheckingOut
+                  ? 'Placing Order…'
+                  : paymentMethod === 'OFFLINE'
+                  ? 'Place Order (Pay Cash at Meetup) →'
+                  : 'Proceed to Pay Online →'}
               </button>
 
               <Link to="/" style={continueLinkStyle} id="continue-shopping-btn">
@@ -318,14 +342,16 @@ const checkoutErrorStyle: React.CSSProperties = { display: 'flex', justifyConten
 // Payment method styles
 const paymentSectionStyle: React.CSSProperties = { marginTop: '16px', paddingTop: '14px', borderTop: '1px solid #f3f4f6' };
 const paymentLabelStyle: React.CSSProperties = { fontSize: '13px', fontWeight: '600', color: '#374151', margin: '0 0 8px 0' };
-const paymentToggleStyle: React.CSSProperties = { display: 'flex', gap: '8px', marginBottom: '8px' };
-const payMethodBtnStyle = (active: boolean): React.CSSProperties => ({
-  flex: 1, padding: '8px 6px', borderRadius: '8px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.15s ease', fontFamily: "'Inter', system-ui, sans-serif",
-  border: active ? '2px solid #111827' : '1px solid #e5e7eb',
-  backgroundColor: active ? '#111827' : '#f9fafb',
-  color: active ? '#ffffff' : '#6b7280',
+const payMethodCardStyle = (active: boolean): React.CSSProperties => ({
+  padding: '10px 12px',
+  borderRadius: '10px',
+  cursor: 'pointer',
+  transition: 'all 0.15s ease',
+  fontFamily: "'Inter', system-ui, sans-serif",
+  border: active ? '2px solid #059669' : '1px solid #e5e7eb',
+  backgroundColor: active ? '#f0fdf4' : '#ffffff',
+  boxShadow: active ? '0 1px 3px rgba(5, 150, 105, 0.1)' : 'none',
 });
-const paymentHintStyle: React.CSSProperties = { fontSize: '11px', color: '#6b7280', margin: 0, lineHeight: '1.4' };
 
 // OTP Modal styles
 const otpOverlayStyle: React.CSSProperties = { position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' };
