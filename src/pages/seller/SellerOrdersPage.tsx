@@ -25,6 +25,9 @@ interface SellerOrder {
   otp_verified: boolean;
   buyer_name: string;
   buyer_email: string;
+  meetup_location?: string;
+  meetup_time?: string;
+  meetup_notes?: string;
   items: OrderItem[];
 }
 
@@ -173,6 +176,26 @@ const SellerOrdersPage: React.FC = () => {
                     ₹{Number(order.total_amount).toFixed(2)}
                   </span>
                 </div>
+
+                {/* Campus Meetup Information for Seller */}
+                {order.meetup_location && (
+                  <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '10px 14px', marginTop: '12px', fontSize: '13px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#166534', fontWeight: '700', marginBottom: '4px' }}>
+                      <span>📍 Handover Spot:</span>
+                      <span>{order.meetup_location}</span>
+                    </div>
+                    {order.meetup_time && (
+                      <div style={{ color: '#15803d', fontSize: '12px', marginBottom: order.meetup_notes ? '4px' : '0' }}>
+                        ⏰ <strong>Scheduled Meetup:</strong> {order.meetup_time}
+                      </div>
+                    )}
+                    {order.meetup_notes && (
+                      <div style={{ color: '#166534', fontSize: '12px', fontStyle: 'italic', marginTop: '2px' }}>
+                        📝 Note from buyer: "{order.meetup_notes}"
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* ── OTP Verification Panel (only for PENDING_MEETUP) ── */}
                 {isPending && (

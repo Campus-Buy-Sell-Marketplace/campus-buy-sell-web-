@@ -16,6 +16,8 @@ interface CheckoutOrder {
   deliveryOtp: string;
   paymentMethod: string;
   totalAmount: number;
+  meetupLocation?: string;
+  meetupTime?: string;
 }
 
 const CartPage: React.FC = () => {
@@ -27,6 +29,9 @@ const CartPage: React.FC = () => {
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [checkoutError, setCheckoutError] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'OFFLINE' | 'ONLINE'>('OFFLINE');
+  const [meetupLocation, setMeetupLocation] = useState('Campus Central Library Gate');
+  const [meetupTime, setMeetupTime] = useState('Tomorrow (4:00 PM - 5:30 PM)');
+  const [meetupNotes, setMeetupNotes] = useState('');
   // After checkout succeeds — show OTP modal
   const [completedOrder, setCompletedOrder] = useState<CheckoutOrder | null>(null);
 
@@ -41,7 +46,12 @@ const CartPage: React.FC = () => {
     setCheckoutError('');
     setIsCheckingOut(true);
     try {
-      const res = await api.post<{ order: CheckoutOrder }>('/orders/checkout', { paymentMethod });
+      const res = await api.post<{ order: CheckoutOrder }>('/orders/checkout', {
+        paymentMethod,
+        meetupLocation,
+        meetupTime,
+        meetupNotes: meetupNotes.trim() || undefined,
+      });
       const order = res.data.order;
       if (typeof refreshCart === 'function') await refreshCart();
       // Show OTP modal instead of navigating immediately
@@ -219,6 +229,59 @@ const CartPage: React.FC = () => {
                     </div>
                   </div>
                 </div>
+
+                {/* Meetup Details when OFFLINE is selected */}
+                {paymentMethod === 'OFFLINE' && (
+                  <div style={{ backgroundColor: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px', marginTop: '10px' }}>
+                    <p style={{ fontSize: '12px', fontWeight: '700', color: '#111827', margin: '0 0 10px 0' }}>
+                      📍 Campus Meetup Details
+                    </p>
+
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#4b5563', marginBottom: '4px' }}>
+                      Meetup Spot on Campus
+                    </label>
+                    <select
+                      id="meetup-location-select"
+                      value={meetupLocation}
+                      onChange={(e) => setMeetupLocation(e.target.value)}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '12px', backgroundColor: '#ffffff', color: '#111827', marginBottom: '10px', outline: 'none' }}
+                    >
+                      <option value="Campus Central Library Gate">🏛️ Campus Central Library Gate</option>
+                      <option value="Student Activity Center (SAC)">🏫 Student Activity Center (SAC)</option>
+                      <option value="Main Canteen / Food Court">☕ Main Canteen / Food Court</option>
+                      <option value="Academic Block A - Reception">🏢 Academic Block A - Reception</option>
+                      <option value="Hostel Block - Common Area">🛋️ Hostel Block - Common Area</option>
+                      <option value="Sports Complex / Ground">🏃 Sports Complex / Ground</option>
+                    </select>
+
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#4b5563', marginBottom: '4px' }}>
+                      Preferred Meetup Time
+                    </label>
+                    <select
+                      id="meetup-time-select"
+                      value={meetupTime}
+                      onChange={(e) => setMeetupTime(e.target.value)}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '12px', backgroundColor: '#ffffff', color: '#111827', marginBottom: '10px', outline: 'none' }}
+                    >
+                      <option value="Today (4:30 PM - 6:00 PM)">⚡ Today (4:30 PM - 6:00 PM)</option>
+                      <option value="Tomorrow (1:00 PM - 2:00 PM - Lunch)">☀️ Tomorrow (1:00 PM - 2:00 PM - Lunch)</option>
+                      <option value="Tomorrow (4:00 PM - 5:30 PM)">🌆 Tomorrow (4:00 PM - 5:30 PM)</option>
+                      <option value="Day After Tomorrow (4:00 PM - 5:30 PM)">📅 Day After Tomorrow (4:00 PM - 5:30 PM)</option>
+                    </select>
+
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#4b5563', marginBottom: '4px' }}>
+                      Note for Seller (Optional)
+                    </label>
+                    <input
+                      id="meetup-notes-input"
+                      type="text"
+                      placeholder="e.g. Near main stairs, wearing blue backpack..."
+                      value={meetupNotes}
+                      onChange={(e) => setMeetupNotes(e.target.value)}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '12px', backgroundColor: '#ffffff', color: '#111827', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                )}
               </div>
 
               {checkoutError && (
@@ -281,6 +344,15 @@ const CartPage: React.FC = () => {
             <p style={otpWarningStyle}>
               ⚠️ Share this code <strong>only after</strong> you have received your items. The seller will enter it to confirm delivery.
             </p>
+
+            <div style={{ backgroundColor: '#f9fafb', borderRadius: '10px', border: '1px solid #e5e7eb', padding: '10px 14px', margin: '0 0 16px 0', textAlign: 'left', fontSize: '12px' }}>
+              <div style={{ color: '#1f2937', marginBottom: '4px' }}>
+                📍 <strong>Meetup Spot:</strong> {completedOrder.meetupLocation || meetupLocation}
+              </div>
+              <div style={{ color: '#1f2937' }}>
+                ⏰ <strong>When:</strong> {completedOrder.meetupTime || meetupTime}
+              </div>
+            </div>
 
             <div style={otpAmountStyle}>
               Total: <strong>₹{Number(completedOrder.totalAmount).toFixed(2)}</strong>

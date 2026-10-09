@@ -26,6 +26,9 @@ interface Order {
   payment_method: string;
   delivery_otp: string | null;
   otp_verified: boolean;
+  meetup_location?: string;
+  meetup_time?: string;
+  meetup_notes?: string;
   items: OrderItem[];
 }
 
@@ -158,6 +161,26 @@ const OrdersPage: React.FC = () => {
                     ₹{Number(order.total_amount).toFixed(2)}
                   </span>
                 </div>
+
+                {/* Campus Meetup Information */}
+                {order.meetup_location && (
+                  <div style={{ backgroundColor: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px 14px', marginTop: '12px', fontSize: '13px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#1f2937', fontWeight: '600', marginBottom: '4px' }}>
+                      <span>📍 Meetup Spot:</span>
+                      <span style={{ color: '#111827', fontWeight: '700' }}>{order.meetup_location}</span>
+                    </div>
+                    {order.meetup_time && (
+                      <div style={{ color: '#4b5563', fontSize: '12px', marginBottom: order.meetup_notes ? '4px' : '0' }}>
+                        ⏰ <strong>Scheduled:</strong> {order.meetup_time}
+                      </div>
+                    )}
+                    {order.meetup_notes && (
+                      <div style={{ color: '#6b7280', fontSize: '12px', fontStyle: 'italic', marginTop: '2px' }}>
+                        📝 Note: "{order.meetup_notes}"
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* OTP section — shown only for PENDING_MEETUP orders */}
                 {isPending && order.delivery_otp && (
