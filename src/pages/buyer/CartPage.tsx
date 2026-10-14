@@ -42,6 +42,17 @@ const CartPage: React.FC = () => {
     }
   }, [checkoutError]);
 
+  const loadRazorpay = () => {
+    return new Promise<boolean>((resolve) => {
+      if ((window as any).Razorpay) return resolve(true);
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
   const handleCheckout = async () => {
     setCheckoutError('');
     setIsCheckingOut(true);
@@ -53,15 +64,81 @@ const CartPage: React.FC = () => {
         meetupNotes: meetupNotes.trim() || undefined,
       });
       const order = res.data.order;
-      if (typeof refreshCart === 'function') await refreshCart();
-      // Show OTP modal instead of navigating immediately
-      setCompletedOrder(order);
+
+      if (paymentMethod === 'ONLINE') {
+        const scriptLoaded = await loadRazorpay();
+        if (!scriptLoaded) {
+          throw new Error('Failed to load Razorpay payment gateway. Please check your internet connection.');
+        }
+
+        const initRes = await api.post<{
+          razorpayOrderId: string;
+          amountPaise: number;
+          currency: string;
+          keyId: string;
+        }>('/payments/init', { orderId: order.orderId });
+
+        const options = {
+          key: initRes.data.keyId,
+          amount: initRes.data.amountPaise,
+          currency: initRes.data.currency,
+          name: 'Campus Marketplace',
+          description: `Order #${order.orderId.slice(0, 8).toUpperCase()}`,
+          order_id: initRes.data.razorpayOrderId,
+          handler: async function (response: any) {
+            try {
+              setIsCheckingOut(true);
+              const verifyRes = await api.post<{ deliveryOtp: string }>('/payments/verify', {
+                orderId: order.orderId,
+                razorpayOrderId: response.razorpay_order_id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature,
+              });
+
+              if (typeof refreshCart === 'function') await refreshCart();
+              showToast('Payment verified successfully!', 'success');
+              setCompletedOrder({
+                ...order,
+                deliveryOtp: verifyRes.data.deliveryOtp,
+              });
+            } catch (vErr: any) {
+              const msg = vErr?.response?.data?.message || 'Payment verification failed.';
+              showToast(msg, 'error');
+              navigate('/orders');
+            } finally {
+              setIsCheckingOut(false);
+            }
+          },
+          modal: {
+            ondismiss: function () {
+              if (typeof refreshCart === 'function') refreshCart();
+              showToast('Payment window closed. You can complete payment anytime from My Orders.', 'info');
+              navigate('/orders');
+            },
+          },
+          theme: {
+            color: '#2563eb',
+          },
+        };
+
+        const rzp = new (window as any).Razorpay(options);
+        rzp.on('payment.failed', function (resp: any) {
+          showToast(`Payment failed: ${resp.error.description || 'Transaction declined'}`, 'error');
+        });
+        rzp.open();
+      } else {
+        // Offline Pay at Meetup
+        if (typeof refreshCart === 'function') await refreshCart();
+        setCompletedOrder(order);
+      }
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Checkout failed. Please try again.';
+      const msg = err?.response?.data?.message || err?.message || 'Checkout failed. Please try again.';
       setCheckoutError(msg);
       showToast(msg, 'error');
     } finally {
-      setIsCheckingOut(false);
+      if (paymentMethod === 'OFFLINE') {
+        setIsCheckingOut(false);
+      }
     }
   };
 
@@ -220,22 +297,21 @@ const CartPage: React.FC = () => {
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <span style={{ fontSize: '13px', fontWeight: '700', color: '#111827' }}>💳 Pay Online</span>
-                          <span style={{ fontSize: '10px', fontWeight: '600', backgroundColor: '#fef3c7', color: '#b45309', padding: '2px 6px', borderRadius: '4px' }}>Coming Soon</span>
+                          <span style={{ fontSize: '10px', fontWeight: '600', backgroundColor: '#dcfce7', color: '#15803d', padding: '2px 6px', borderRadius: '4px' }}>⚡ Instant Online</span>
                         </div>
                         <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>
-                          Cards, UPI & Net Banking
+                          Cards, UPI, Google Pay & Net Banking via Razorpay
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Meetup Details when OFFLINE is selected */}
-                {paymentMethod === 'OFFLINE' && (
-                  <div style={{ backgroundColor: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px', marginTop: '10px' }}>
-                    <p style={{ fontSize: '12px', fontWeight: '700', color: '#111827', margin: '0 0 10px 0' }}>
-                      📍 Campus Meetup Details
-                    </p>
+                {/* Campus Meetup / Handover Details */}
+                <div style={{ backgroundColor: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px', marginTop: '10px' }}>
+                  <p style={{ fontSize: '12px', fontWeight: '700', color: '#111827', margin: '0 0 10px 0' }}>
+                    📍 Campus Handover Spot & Time
+                  </p>
 
                     <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#4b5563', marginBottom: '4px' }}>
                       Meetup Spot on Campus
@@ -281,7 +357,6 @@ const CartPage: React.FC = () => {
                       style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '12px', backgroundColor: '#ffffff', color: '#111827', outline: 'none', boxSizing: 'border-box' }}
                     />
                   </div>
-                )}
               </div>
 
               {checkoutError && (

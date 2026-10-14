@@ -33,11 +33,13 @@ interface SellerOrder {
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {
-  PENDING_MEETUP: { label: '⏳ Awaiting Meetup', color: '#92400e', bg: '#fffbeb' },
-  COMPLETED:      { label: '✅ Completed',        color: '#065f46', bg: '#f0fdf4' },
-  CANCELLED:      { label: '❌ Cancelled',         color: '#991b1b', bg: '#fef2f2' },
-  CONFIRMED:      { label: '✅ Confirmed',          color: '#065f46', bg: '#f0fdf4' },
-  PENDING:        { label: '⏳ Pending',            color: '#92400e', bg: '#fffbeb' },
+  PENDING_MEETUP:      { label: '⏳ Awaiting Meetup',         color: '#92400e', bg: '#fffbeb' },
+  PAID_PENDING_MEETUP: { label: '✅ Paid · Awaiting Meetup', color: '#1e40af', bg: '#eff6ff' },
+  PENDING_PAYMENT:     { label: '💳 Payment Pending',         color: '#b45309', bg: '#fef3c7' },
+  COMPLETED:           { label: '✅ Completed',               color: '#065f46', bg: '#f0fdf4' },
+  CANCELLED:           { label: '❌ Cancelled',                color: '#991b1b', bg: '#fef2f2' },
+  CONFIRMED:           { label: '✅ Confirmed',                 color: '#065f46', bg: '#f0fdf4' },
+  PENDING:             { label: '⏳ Pending',                   color: '#92400e', bg: '#fffbeb' },
 };
 
 const SellerOrdersPage: React.FC = () => {
@@ -118,7 +120,7 @@ const SellerOrdersPage: React.FC = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {orders.map((order) => {
             const statusInfo = STATUS_LABELS[order.status] || { label: order.status, color: '#374151', bg: '#f3f4f6' };
-            const isPending = order.status === 'PENDING_MEETUP';
+            const isPending = order.status === 'PENDING_MEETUP' || order.status === 'PAID_PENDING_MEETUP';
             const isVerifyingThis = verifying === order.id;
 
             return (

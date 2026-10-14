@@ -33,11 +33,13 @@ interface Order {
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {
-  PENDING_MEETUP: { label: '⏳ Awaiting Meetup', color: '#92400e', bg: '#fffbeb' },
-  COMPLETED:      { label: '✅ Completed',        color: '#065f46', bg: '#f0fdf4' },
-  CANCELLED:      { label: '❌ Cancelled',         color: '#991b1b', bg: '#fef2f2' },
-  CONFIRMED:      { label: '✅ Confirmed',          color: '#065f46', bg: '#f0fdf4' },
-  PENDING:        { label: '⏳ Pending',            color: '#92400e', bg: '#fffbeb' },
+  PENDING_MEETUP:      { label: '⏳ Awaiting Meetup',         color: '#92400e', bg: '#fffbeb' },
+  PAID_PENDING_MEETUP: { label: '✅ Paid · Awaiting Meetup', color: '#1e40af', bg: '#eff6ff' },
+  PENDING_PAYMENT:     { label: '💳 Payment Pending',         color: '#b45309', bg: '#fef3c7' },
+  COMPLETED:           { label: '✅ Completed',               color: '#065f46', bg: '#f0fdf4' },
+  CANCELLED:           { label: '❌ Cancelled',                color: '#991b1b', bg: '#fef2f2' },
+  CONFIRMED:           { label: '✅ Confirmed',                 color: '#065f46', bg: '#f0fdf4' },
+  PENDING:             { label: '⏳ Pending',                   color: '#92400e', bg: '#fffbeb' },
 };
 
 const OrdersPage: React.FC = () => {
@@ -62,6 +64,70 @@ const OrdersPage: React.FC = () => {
       .catch(() => setError('Failed to load orders.'))
       .finally(() => setIsLoading(false));
   }, []);
+
+  const [payingOrderId, setPayingOrderId] = useState<string | null>(null);
+
+  const handlePayNow = async (order: Order) => {
+    setPayingOrderId(order.id);
+    setError('');
+    try {
+      if (!(window as any).Razorpay) {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+          script.onload = () => resolve(true);
+          script.onerror = () => reject(new Error('Failed to load Razorpay SDK'));
+          document.body.appendChild(script);
+        });
+      }
+
+      const initRes = await api.post<{
+        razorpayOrderId: string;
+        amountPaise: number;
+        currency: string;
+        keyId: string;
+      }>('/payments/init', { orderId: order.id });
+
+      const options = {
+        key: initRes.data.keyId,
+        amount: initRes.data.amountPaise,
+        currency: initRes.data.currency,
+        name: 'Campus Marketplace',
+        description: `Order #${order.id.slice(0, 8).toUpperCase()}`,
+        order_id: initRes.data.razorpayOrderId,
+        handler: async function (response: any) {
+          try {
+            await api.post('/payments/verify', {
+              orderId: order.id,
+              razorpayOrderId: response.razorpay_order_id,
+              razorpayPaymentId: response.razorpay_payment_id,
+              razorpaySignature: response.razorpay_signature,
+            });
+            const refreshed = await api.get<{ orders: Order[] }>('/orders');
+            setOrders(refreshed.data.orders);
+          } catch (vErr: any) {
+            setError(vErr?.response?.data?.message || 'Payment verification failed.');
+          } finally {
+            setPayingOrderId(null);
+          }
+        },
+        modal: {
+          ondismiss: function () {
+            setPayingOrderId(null);
+          },
+        },
+        theme: {
+          color: '#2563eb',
+        },
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
+    } catch (err: any) {
+      setError(err?.response?.data?.message || err?.message || 'Failed to start payment.');
+      setPayingOrderId(null);
+    }
+  };
 
   const toggleOtpReveal = (orderId: string) => {
     setRevealedOtps((prev) => {
@@ -107,7 +173,7 @@ const OrdersPage: React.FC = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {orders.map((order) => {
             const statusInfo = STATUS_LABELS[order.status] || { label: order.status, color: '#374151', bg: '#f3f4f6' };
-            const isPending = order.status === 'PENDING_MEETUP';
+            const isPending = order.status === 'PENDING_MEETUP' || order.status === 'PAID_PENDING_MEETUP';
             const otpRevealed = revealedOtps.has(order.id);
 
             return (
@@ -214,6 +280,38 @@ const OrdersPage: React.FC = () => {
                         Click "Show OTP" to reveal your delivery code.
                       </p>
                     )}
+                  </div>
+                )}
+
+                {/* Pending Payment Card */}
+                {order.status === 'PENDING_PAYMENT' && (
+                  <div style={{ backgroundColor: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '12px 14px', marginTop: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                      <div>
+                        <div style={{ fontWeight: '700', color: '#92400e', fontSize: '13px' }}>
+                          ⚠️ Payment Incomplete (15-min reservation window)
+                        </div>
+                        <div style={{ color: '#b45309', fontSize: '12px', marginTop: '2px' }}>
+                          Complete online payment to secure your items and generate your Delivery OTP.
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handlePayNow(order)}
+                        disabled={payingOrderId === order.id}
+                        style={{
+                          backgroundColor: '#2563eb',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '6px',
+                          padding: '8px 14px',
+                          fontWeight: '700',
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {payingOrderId === order.id ? 'Opening...' : '💳 Pay Now via Razorpay'}
+                      </button>
+                    </div>
                   </div>
                 )}
 
