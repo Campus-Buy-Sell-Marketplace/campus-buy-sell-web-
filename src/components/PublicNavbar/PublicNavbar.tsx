@@ -1,7 +1,5 @@
 // ============================================================
-// LAVSA — Public Top Navbar
-// Shown on public pages (landing, products) before login.
-// Has: Logo | Search | Sign In | Cart
+// UniTrade — Public Top Navbar — White Theme
 // ============================================================
 
 import React, { useState } from 'react';
@@ -49,16 +47,14 @@ const PublicNavbar: React.FC = () => {
 
         {/* ── Right actions ── */}
         <div style={actionsStyle}>
-          {/* Cart */}
           <Link to={isAuthenticated ? '/cart' : '/login'} style={cartBtnStyle} id="navbar-cart-btn">
-            <span style={{ fontSize: '20px' }}>🛒</span>
+            <span style={{ fontSize: '18px' }}>🛒</span>
             {totalCount > 0 && (
               <span style={cartBadgeStyle}>{totalCount > 99 ? '99+' : totalCount}</span>
             )}
             <span style={cartLabelStyle}>Cart</span>
           </Link>
 
-          {/* Auth button */}
           {isAuthenticated ? (
             <Link to="/home" style={signInBtnStyle} id="navbar-dashboard-btn">
               <span style={avatarStyle}>{user?.name?.charAt(0).toUpperCase()}</span>
@@ -74,10 +70,15 @@ const PublicNavbar: React.FC = () => {
 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-        #public-search-input:focus { outline: none; border-color: #111827 !important; box-shadow: 0 0 0 3px rgba(17,24,39,0.08); }
-        #navbar-signin-btn:hover { background-color: #374151 !important; }
-        #navbar-cart-btn:hover { opacity: 0.8; }
-        #navbar-dashboard-btn:hover { background-color: #374151 !important; }
+        #public-search-input::placeholder { color: #94a3b8; }
+        #public-search-input:focus { outline: none; border-color: #6366f1 !important; box-shadow: 0 0 0 3px rgba(99,102,241,0.12); }
+        #navbar-signin-btn:hover { background-color: #0f172a !important; color: #fff !important; }
+        #navbar-cart-btn:hover { background-color: #f8fafc !important; }
+        #navbar-dashboard-btn:hover { background-color: #0f172a !important; color: #fff !important; }
+        #public-search-btn:hover { background-color: #4f46e5 !important; }
+        @media (max-width: 640px) {
+          #public-search-form { display: none !important; }
+        }
       `}</style>
     </header>
   );
@@ -89,8 +90,9 @@ const navbarStyle: React.CSSProperties = {
   position: 'sticky',
   top: 0,
   zIndex: 100,
-  backgroundColor: '#111827',
-  borderBottom: '1px solid #1f2937',
+  backgroundColor: '#ffffff',
+  borderBottom: '1px solid #e8edf3',
+  boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
   fontFamily: "'Inter', system-ui, sans-serif",
 };
 
@@ -115,53 +117,52 @@ const logoStyle: React.CSSProperties = {
 const logoTextStyle: React.CSSProperties = {
   fontSize: '20px',
   fontWeight: '900',
-  letterSpacing: '0.08em',
-  color: '#ffffff',
+  letterSpacing: '0.04em',
+  color: '#0f172a',
 };
 
 const logoDotStyle: React.CSSProperties = {
-  color: '#6b7280',
-  fontSize: '7px',
+  color: '#6366f1',
+  fontSize: '8px',
   marginTop: '4px',
 };
 
 const searchFormStyle: React.CSSProperties = {
   flex: 1,
   display: 'flex',
-  maxWidth: '600px',
-  position: 'relative',
+  maxWidth: '560px',
 };
 
 const searchInputStyle: React.CSSProperties = {
   flex: 1,
-  height: '38px',
-  padding: '0 12px',
-  borderRadius: '6px 0 0 6px',
-  border: '1.5px solid #374151',
+  height: '40px',
+  padding: '0 14px',
+  borderRadius: '10px 0 0 10px',
+  border: '1.5px solid #e2e8f0',
   borderRight: 'none',
-  backgroundColor: '#1f2937',
-  color: '#f9fafb',
+  backgroundColor: '#f8fafc',
+  color: '#0f172a',
   fontSize: '14px',
   fontFamily: "'Inter', system-ui, sans-serif",
-  transition: 'border-color 0.15s ease',
+  transition: 'border-color 0.15s, box-shadow 0.15s',
 };
 
 const searchBtnStyle: React.CSSProperties = {
-  height: '38px',
-  padding: '0 14px',
-  borderRadius: '0 6px 6px 0',
-  border: '1.5px solid #374151',
-  backgroundColor: '#374151',
+  height: '40px',
+  padding: '0 16px',
+  borderRadius: '0 10px 10px 0',
+  border: '1.5px solid #6366f1',
+  backgroundColor: '#6366f1',
   color: '#ffffff',
   cursor: 'pointer',
-  fontSize: '14px',
-  transition: 'background-color 0.15s ease',
+  fontSize: '15px',
+  transition: 'background-color 0.15s',
 };
 
 const actionsStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
-  gap: '12px',
+  gap: '10px',
   flexShrink: 0,
   marginLeft: 'auto',
 };
@@ -170,22 +171,24 @@ const cartBtnStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: '6px',
-  padding: '6px 10px',
-  borderRadius: '6px',
+  padding: '7px 12px',
+  borderRadius: '9px',
   textDecoration: 'none',
-  color: '#f9fafb',
+  color: '#374151',
   fontSize: '14px',
+  fontWeight: '500',
   position: 'relative',
-  transition: 'opacity 0.15s ease',
+  transition: 'background-color 0.15s',
+  border: '1.5px solid #e2e8f0',
 };
 
 const cartBadgeStyle: React.CSSProperties = {
   position: 'absolute',
-  top: '0px',
-  right: '4px',
+  top: '-4px',
+  right: '-4px',
   backgroundColor: '#ef4444',
   color: '#ffffff',
-  fontSize: '10px',
+  fontSize: '9px',
   fontWeight: '700',
   borderRadius: '50%',
   width: '16px',
@@ -197,7 +200,7 @@ const cartBadgeStyle: React.CSSProperties = {
 
 const cartLabelStyle: React.CSSProperties = {
   fontSize: '13px',
-  fontWeight: '500',
+  fontWeight: '600',
 };
 
 const signInBtnStyle: React.CSSProperties = {
@@ -205,20 +208,20 @@ const signInBtnStyle: React.CSSProperties = {
   alignItems: 'center',
   gap: '8px',
   padding: '8px 18px',
-  borderRadius: '6px',
-  backgroundColor: '#ffffff',
-  color: '#111827',
+  borderRadius: '9px',
+  backgroundColor: '#0f172a',
+  color: '#ffffff',
   fontSize: '14px',
   fontWeight: '600',
   textDecoration: 'none',
-  transition: 'background-color 0.15s ease',
+  transition: 'background-color 0.15s',
 };
 
 const avatarStyle: React.CSSProperties = {
   width: '22px',
   height: '22px',
   borderRadius: '50%',
-  backgroundColor: '#111827',
+  backgroundColor: '#6366f1',
   color: '#ffffff',
   display: 'flex',
   alignItems: 'center',

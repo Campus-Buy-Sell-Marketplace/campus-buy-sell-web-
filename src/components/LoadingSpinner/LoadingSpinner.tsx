@@ -49,7 +49,7 @@ const spinnerStyle: React.CSSProperties = {
   border: '3px solid #e5e7eb',
   borderTop: '3px solid #111827',
   borderRadius: '50%',
-  animation: 'lavsa-spin 0.75s linear infinite',
+  animation: 'unitrade-spin 0.75s linear infinite',
 };
 
 const messageStyle: React.CSSProperties = {
@@ -60,7 +60,7 @@ const messageStyle: React.CSSProperties = {
 };
 
 const keyframes = `
-  @keyframes lavsa-spin {
+  @keyframes unitrade-spin {
     to { transform: rotate(360deg); }
   }
 `;

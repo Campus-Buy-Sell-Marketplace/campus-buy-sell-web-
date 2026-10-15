@@ -57,7 +57,7 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
               ...toastItemStyle,
               ...getToastStyleByType(t.type),
             }}
-            className="lavsa-toast-slide-in"
+            className="unitrade-toast-slide-in"
           >
             <span style={toastIconStyle}>{getToastIcon(t.type)}</span>
             <div style={toastMessageStyle}>{t.message}</div>
@@ -83,7 +83,7 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
             transform: translateY(0) scale(1);
           }
         }
-        .lavsa-toast-slide-in {
+        .unitrade-toast-slide-in {
           animation: toastSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
       `}</style>

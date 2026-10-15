@@ -95,7 +95,7 @@ const SettingsPage: React.FC = () => {
             <h2 style={sectionHeadingStyle}>Selling</h2>
             <div style={{ padding: '20px' }}>
               <p style={{ color: '#374151', fontSize: '14px', margin: '0 0 8px 0' }}>
-                Want to sell items on LAVSA? Apply to become a seller and start listing products for your campus.
+                Want to sell items on UniTrade? Apply to become a seller and start listing products for your campus.
               </p>
               <p style={{ color: '#9ca3af', fontSize: '12px', margin: '0 0 16px 0' }}>
                 You'll verify your identity and submit a brief application. Admin approval is required.
