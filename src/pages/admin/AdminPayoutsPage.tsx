@@ -1,5 +1,5 @@
 // ============================================================
-// LAVSA — Admin Payouts Management Page
+// LAVSA — Admin Payouts & Escrow Management Page
 // ============================================================
 
 import React, { useEffect, useState } from 'react';
@@ -10,15 +10,21 @@ import {
   fetchPayouts,
   markPayoutAsPaid,
   fetchStats,
+  fetchEscrowOrders,
+  confirmDeliveryAsAdmin,
   AdminPayout,
   AdminStats,
+  EscrowOrder,
 } from '../../services/adminService';
 
 const AdminPayoutsPage: React.FC = () => {
   const [payouts, setPayouts] = useState<AdminPayout[]>([]);
+  const [escrowOrders, setEscrowOrders] = useState<EscrowOrder[]>([]);
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'ALL' | 'PENDING' | 'PAID'>('PENDING');
+  const [filter, setFilter] = useState<'ESCROW' | 'PENDING' | 'PAID' | 'ALL'>('ESCROW');
+  const [verifyingOrderId, setVerifyingOrderId] = useState<string | null>(null);
+  const [feedbackMessage, setFeedbackMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Modal State for marking payout as paid
   const [selectedPayout, setSelectedPayout] = useState<AdminPayout | null>(null);
@@ -28,31 +34,82 @@ const AdminPayoutsPage: React.FC = () => {
   const [modalError, setModalError] = useState('');
   const [copySuccess, setCopySuccess] = useState<string | null>(null);
 
-  const loadData = async () => {
+  const loadData = async (initialCheck = false) => {
     setLoading(true);
     try {
-      const [statsData, payoutsData] = await Promise.all([
+      const [statsData, payoutsData, escrowData] = await Promise.all([
         fetchStats(),
-        fetchPayouts(filter),
+        fetchPayouts(filter === 'ESCROW' ? 'ALL' : filter),
+        fetchEscrowOrders(),
       ]);
       setStats(statsData);
       setPayouts(payoutsData);
+      setEscrowOrders(escrowData);
+
+      if (initialCheck) {
+        // If there are escrow orders awaiting delivery, start on ESCROW tab
+        if ((escrowData?.length || 0) > 0) {
+          setFilter('ESCROW');
+        } else if ((statsData?.pendingPayoutsCount || 0) > 0) {
+          setFilter('PENDING');
+        }
+      }
     } catch (err) {
-      console.error('Failed to load admin payouts:', err);
+      console.error('Failed to load admin payouts and escrow data:', err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadData();
+    loadData(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    // When tab changes, reload payouts for current filter
+    if (filter !== 'ESCROW') {
+      fetchPayouts(filter).then(setPayouts).catch(console.error);
+    }
   }, [filter]);
 
   const handleCopyUpi = (upiId: string, id: string) => {
     navigator.clipboard.writeText(upiId);
     setCopySuccess(id);
     setTimeout(() => setCopySuccess(null), 2500);
+  };
+
+  const handleVerifyDelivery = async (order: EscrowOrder) => {
+    if (
+      !window.confirm(
+        `Confirm delivery for Order #${order.id.slice(0, 8)} (${order.product_title})?\n\n` +
+        `This will:\n` +
+        `1. Mark the order as COMPLETED\n` +
+        `2. Deduct platform 2% commission\n` +
+        `3. Generate a seller payout with UPI QR Code ready for transfer to ${order.seller_name}.`
+      )
+    ) {
+      return;
+    }
+
+    setVerifyingOrderId(order.id);
+    setFeedbackMessage(null);
+    try {
+      await confirmDeliveryAsAdmin(order.id);
+      setFeedbackMessage({
+        type: 'success',
+        text: `✓ Delivery verified for Order #${order.id.slice(0, 8)}! Platform 2% fee deducted and seller payout generated. Switched to Pending Payouts.`
+      });
+      await loadData();
+      setFilter('PENDING');
+    } catch (err: any) {
+      setFeedbackMessage({
+        type: 'error',
+        text: err.response?.data?.message || 'Failed to verify delivery.'
+      });
+    } finally {
+      setVerifyingOrderId(null);
+    }
   };
 
   const openMarkPaidModal = (p: AdminPayout) => {
@@ -76,6 +133,10 @@ const AdminPayoutsPage: React.FC = () => {
     try {
       await markPayoutAsPaid(selectedPayout.id, utrNumber, adminNotes);
       setSelectedPayout(null);
+      setFeedbackMessage({
+        type: 'success',
+        text: `✓ Payout of ₹${Number(selectedPayout.net_payout_amount).toFixed(2)} to ${selectedPayout.seller_name} marked as settled! Reference: ${utrNumber}`
+      });
       await loadData();
     } catch (err: any) {
       setModalError(err.response?.data?.message || 'Failed to mark payout as paid.');
@@ -86,38 +147,95 @@ const AdminPayoutsPage: React.FC = () => {
 
   return (
     <AppLayout>
-      <div style={{ maxWidth: '1050px', margin: '0 auto', fontFamily: "'Inter', system-ui, sans-serif" }}>
+      <div style={{ maxWidth: '1100px', margin: '0 auto', fontFamily: "'Inter', system-ui, sans-serif" }}>
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <div>
-            <h1 style={headingStyle}>Seller Payouts Management</h1>
-            <p style={subStyle}>Review completed orders, transfer net funds via UPI, and mark payouts as settled</p>
+            <h1 style={headingStyle}>Seller Payouts & Escrow Management</h1>
+            <p style={subStyle}>
+              Track paid orders in escrow, verify delivery, and transfer net payouts to sellers via UPI
+            </p>
           </div>
           <Link to="/admin/dashboard" style={secondaryLinkStyle}>
             ← Back to Dashboard
           </Link>
         </div>
 
+        {/* Global Feedback Banner */}
+        {feedbackMessage && (
+          <div
+            style={{
+              padding: '12px 16px',
+              borderRadius: '8px',
+              marginBottom: '20px',
+              fontSize: '13px',
+              fontWeight: '600',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              backgroundColor: feedbackMessage.type === 'success' ? '#ecfdf5' : '#fef2f2',
+              color: feedbackMessage.type === 'success' ? '#065f46' : '#991b1b',
+              border: `1px solid ${feedbackMessage.type === 'success' ? '#a7f3d0' : '#fecaca'}`,
+            }}
+          >
+            <span>{feedbackMessage.text}</span>
+            <button
+              onClick={() => setFeedbackMessage(null)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: 'inherit' }}
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
         {/* Stats Grid */}
         <div style={gridStyle}>
-          <div style={statCardStyle}>
-            <div style={labelStyle}>Pending Transfers</div>
+          {/* Card 1: Held in Escrow */}
+          <div
+            style={{
+              ...statCardStyle,
+              borderTop: (stats?.escrowOrdersCount || 0) > 0 ? '3px solid #6366f1' : '1px solid #e5e7eb',
+              cursor: 'pointer',
+            }}
+            onClick={() => setFilter('ESCROW')}
+            title="Click to view escrow orders"
+          >
+            <div style={labelStyle}>🛡️ Held in Escrow</div>
+            <div style={{ ...valueStyle, color: (stats?.escrowOrdersCount || 0) > 0 ? '#4f46e5' : '#111827' }}>
+              ₹{stats ? Number(stats.escrowOrdersAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '0.00'}
+            </div>
+            <div style={subLabelStyle}>{stats?.escrowOrdersCount || 0} online order(s) awaiting meetup</div>
+          </div>
+
+          {/* Card 2: Pending Transfers */}
+          <div
+            style={{
+              ...statCardStyle,
+              borderTop: (stats?.pendingPayoutsAmount || 0) > 0 ? '3px solid #f59e0b' : '1px solid #e5e7eb',
+              cursor: 'pointer',
+            }}
+            onClick={() => setFilter('PENDING')}
+            title="Click to view pending payouts"
+          >
+            <div style={labelStyle}>⏳ Pending Transfers</div>
             <div style={{ ...valueStyle, color: (stats?.pendingPayoutsAmount || 0) > 0 ? '#d97706' : '#111827' }}>
               ₹{stats ? Number(stats.pendingPayoutsAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '0.00'}
             </div>
-            <div style={subLabelStyle}>{stats?.pendingPayoutsCount || 0} seller(s) awaiting transfer</div>
+            <div style={subLabelStyle}>{stats?.pendingPayoutsCount || 0} seller(s) awaiting UPI transfer</div>
           </div>
 
+          {/* Card 3: Platform 2% Fee Kept */}
           <div style={statCardStyle}>
-            <div style={labelStyle}>Platform 2% Fee Kept</div>
+            <div style={labelStyle}>💼 Platform 2% Fee Kept</div>
             <div style={{ ...valueStyle, color: '#059669' }}>
               ₹{stats ? Number(stats.platformCommissionEarned || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '0.00'}
             </div>
             <div style={subLabelStyle}>Net marketplace earnings</div>
           </div>
 
+          {/* Card 4: Total Users */}
           <div style={statCardStyle}>
-            <div style={labelStyle}>Total Users</div>
+            <div style={labelStyle}>👥 Total Users</div>
             <div style={{ ...valueStyle, color: '#2563eb' }}>
               {stats?.totalUsers || 0}
             </div>
@@ -125,11 +243,17 @@ const AdminPayoutsPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Payouts Table Card */}
+        {/* Main Content Card */}
         <div style={cardStyle}>
           {/* Filter Tabs */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #f3f4f6', paddingBottom: '12px' }}>
-            <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #f3f4f6', paddingBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <button
+                style={filter === 'ESCROW' ? activeTabStyle : tabStyle}
+                onClick={() => setFilter('ESCROW')}
+              >
+                🛡️ In Escrow ({stats?.escrowOrdersCount || escrowOrders.length})
+              </button>
               <button
                 style={filter === 'PENDING' ? activeTabStyle : tabStyle}
                 onClick={() => setFilter('PENDING')}
@@ -146,13 +270,13 @@ const AdminPayoutsPage: React.FC = () => {
                 style={filter === 'ALL' ? activeTabStyle : tabStyle}
                 onClick={() => setFilter('ALL')}
               >
-                All Records
+                All Payout Records
               </button>
             </div>
 
             <button
               style={refreshBtnStyle}
-              onClick={loadData}
+              onClick={() => loadData(false)}
               title="Refresh payouts list"
             >
               🔄 Refresh
@@ -160,135 +284,250 @@ const AdminPayoutsPage: React.FC = () => {
           </div>
 
           {loading ? (
-            <p style={{ color: '#6b7280', fontSize: '14px' }}>Loading payouts...</p>
-          ) : payouts.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px 0', color: '#9ca3af' }}>
-              <span style={{ fontSize: '36px' }}>🎉</span>
-              <p style={{ margin: '8px 0 0 0', fontSize: '15px', fontWeight: '600', color: '#374151' }}>
-                {filter === 'PENDING' ? 'No pending payouts right now!' : 'No records found.'}
-              </p>
-              <p style={{ margin: '4px 0 0 0', fontSize: '13px' }}>
-                All completed orders have been settled to sellers.
-              </p>
+            <p style={{ color: '#6b7280', fontSize: '14px', padding: '20px 0' }}>Loading data...</p>
+          ) : filter === 'ESCROW' ? (
+            /* ============================================================ */
+            /* TAB 1: ESCROW ORDERS (Paid Online, Awaiting Meetup/Delivery) */
+            /* ============================================================ */
+            <div>
+              <div style={infoBannerStyle}>
+                <div style={{ fontWeight: '700', fontSize: '13px', color: '#312e81', marginBottom: '4px' }}>
+                  🛡️ Platform Escrow Protection Active
+                </div>
+                <div style={{ fontSize: '12px', color: '#4338ca', lineHeight: '1.5' }}>
+                  When buyers pay online via Razorpay, funds are held safely by the platform while the buyer and seller arrange meetup. Once the buyer receives the item, the seller enters the <strong>6-digit Delivery OTP</strong>, or you can click <strong>Verify Delivery & Release Payout</strong> below. The 2% fee will be deducted and the net amount will move to <strong>Pending Payouts</strong> with a UPI QR code!
+                </div>
+              </div>
+
+              {escrowOrders.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px 0', color: '#9ca3af' }}>
+                  <span style={{ fontSize: '36px' }}>📦</span>
+                  <p style={{ margin: '8px 0 0 0', fontSize: '15px', fontWeight: '600', color: '#374151' }}>
+                    No orders currently in escrow.
+                  </p>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '13px' }}>
+                    When buyers pay online for campus items, they will appear here until handover.
+                  </p>
+                </div>
+              ) : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '2px solid #f3f4f6', color: '#6b7280' }}>
+                        <th style={{ padding: '12px 10px' }}>Order & Date</th>
+                        <th style={{ padding: '12px 10px' }}>Item</th>
+                        <th style={{ padding: '12px 10px' }}>Buyer</th>
+                        <th style={{ padding: '12px 10px' }}>Seller</th>
+                        <th style={{ padding: '12px 10px' }}>Amount Paid</th>
+                        <th style={{ padding: '12px 10px' }}>Delivery OTP</th>
+                        <th style={{ padding: '12px 10px' }}>Escrow Status</th>
+                        <th style={{ padding: '12px 10px', textAlign: 'right' }}>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {escrowOrders.map((order) => (
+                        <tr key={order.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                          <td style={{ padding: '14px 10px' }}>
+                            <div style={{ fontWeight: '700', color: '#111827', fontFamily: 'monospace' }}>
+                              #{order.id.slice(0, 8)}
+                            </div>
+                            <div style={{ color: '#9ca3af', fontSize: '11px', marginTop: '2px' }}>
+                              {new Date(order.created_at).toLocaleDateString()}
+                            </div>
+                          </td>
+
+                          <td style={{ padding: '14px 10px' }}>
+                            <div style={{ fontWeight: '600', color: '#111827' }}>{order.product_title}</div>
+                            <div style={{ color: '#6b7280', fontSize: '11px' }}>Qty: {order.quantity}</div>
+                          </td>
+
+                          <td style={{ padding: '14px 10px' }}>
+                            <div style={{ fontWeight: '600', color: '#111827' }}>{order.buyer_name}</div>
+                            <div style={{ color: '#6b7280', fontSize: '11px' }}>{order.buyer_email}</div>
+                          </td>
+
+                          <td style={{ padding: '14px 10px' }}>
+                            <div style={{ fontWeight: '600', color: '#111827' }}>{order.seller_name}</div>
+                            <div style={{ color: '#6b7280', fontSize: '11px' }}>{order.seller_email}</div>
+                          </td>
+
+                          <td style={{ padding: '14px 10px' }}>
+                            <div style={{ fontSize: '15px', fontWeight: '800', color: '#059669' }}>
+                              ₹{Number(order.total_amount).toFixed(2)}
+                            </div>
+                            <span style={{ fontSize: '10px', fontWeight: '700', background: '#dcfce7', color: '#166534', padding: '2px 6px', borderRadius: '4px' }}>
+                              PAID (ONLINE)
+                            </span>
+                          </td>
+
+                          <td style={{ padding: '14px 10px' }}>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#e0e7ff', color: '#3730a3', padding: '4px 8px', borderRadius: '6px', fontFamily: 'monospace', fontWeight: '800', fontSize: '13px' }}>
+                              🔐 {order.delivery_otp}
+                            </div>
+                            <div style={{ color: '#9ca3af', fontSize: '10px', marginTop: '2px' }}>
+                              Buyer gives to seller
+                            </div>
+                          </td>
+
+                          <td style={{ padding: '14px 10px' }}>
+                            <span style={{ background: '#ede9fe', color: '#5b21b6', padding: '4px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700' }}>
+                              🛡️ Held in Escrow
+                            </span>
+                          </td>
+
+                          <td style={{ padding: '14px 10px', textAlign: 'right' }}>
+                            <button
+                              onClick={() => handleVerifyDelivery(order)}
+                              disabled={verifyingOrderId === order.id}
+                              style={{
+                                ...verifyBtnStyle,
+                                opacity: verifyingOrderId === order.id ? 0.7 : 1,
+                              }}
+                              title="Confirm buyer received item and generate seller payout"
+                            >
+                              {verifyingOrderId === order.id ? 'Releasing...' : '✓ Release Payout'}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
-                <thead>
-                  <tr style={{ borderBottom: '2px solid #f3f4f6', color: '#6b7280' }}>
-                    <th style={{ padding: '12px 10px' }}>Order & Date</th>
-                    <th style={{ padding: '12px 10px' }}>Seller</th>
-                    <th style={{ padding: '12px 10px' }}>Seller UPI (VPA)</th>
-                    <th style={{ padding: '12px 10px' }}>Sale Amount</th>
-                    <th style={{ padding: '12px 10px' }}>2% Fee</th>
-                    <th style={{ padding: '12px 10px' }}>Net Payable</th>
-                    <th style={{ padding: '12px 10px' }}>Status</th>
-                    <th style={{ padding: '12px 10px', textAlign: 'right' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {payouts.map((p) => (
-                    <tr key={p.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                      <td style={{ padding: '14px 10px' }}>
-                        <div style={{ fontWeight: '600', color: '#111827', fontFamily: 'monospace' }}>
-                          #{p.order_id.slice(0, 8)}
-                        </div>
-                        <div style={{ color: '#9ca3af', fontSize: '11px', marginTop: '2px' }}>
-                          {new Date(p.created_at).toLocaleDateString()}
-                        </div>
-                      </td>
-
-                      <td style={{ padding: '14px 10px' }}>
-                        <div style={{ fontWeight: '600', color: '#111827' }}>{p.seller_name}</div>
-                        <div style={{ color: '#6b7280', fontSize: '11px' }}>{p.seller_email}</div>
-                      </td>
-
-                      <td style={{ padding: '14px 10px' }}>
-                        {p.seller_upi_id === 'NOT_SET' ? (
-                          <span style={{ color: '#dc2626', fontWeight: '700', fontSize: '12px' }}>
-                            ⚠️ UPI Not Added Yet
-                          </span>
-                        ) : (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ fontFamily: 'monospace', fontWeight: '600', background: '#f3f4f6', padding: '3px 7px', borderRadius: '4px' }}>
-                              {p.seller_upi_id}
-                            </span>
-                            <button
-                              onClick={() => handleCopyUpi(p.seller_upi_id, p.id)}
-                              style={copyBtnStyle}
-                              title="Copy UPI ID"
-                            >
-                              {copySuccess === p.id ? '✓ Copied' : 'Copy'}
-                            </button>
-                          </div>
-                        )}
-                        {p.account_holder_name && (
-                          <div style={{ color: '#6b7280', fontSize: '11px', marginTop: '2px' }}>
-                            Name: {p.account_holder_name}
-                          </div>
-                        )}
-                      </td>
-
-                      <td style={{ padding: '14px 10px', fontWeight: '500' }}>
-                        ₹{Number(p.order_amount).toFixed(2)}
-                      </td>
-
-                      <td style={{ padding: '14px 10px', color: '#059669', fontWeight: '600' }}>
-                        ₹{Number(p.commission_amount).toFixed(2)}
-                      </td>
-
-                      <td style={{ padding: '14px 10px' }}>
-                        <span style={{ fontSize: '15px', fontWeight: '800', color: '#111827' }}>
-                          ₹{Number(p.net_payout_amount).toFixed(2)}
-                        </span>
-                      </td>
-
-                      <td style={{ padding: '14px 10px' }}>
-                        {p.status === 'PAID' ? (
-                          <div>
-                            <span style={paidBadgeStyle}>✓ Paid</span>
-                            {p.transaction_reference && (
-                              <div style={{ fontFamily: 'monospace', fontSize: '11px', color: '#6b7280', marginTop: '4px' }}>
-                                Ref: {p.transaction_reference}
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <span style={pendingBadgeStyle}>⏳ Pending</span>
-                        )}
-                      </td>
-
-                      <td style={{ padding: '14px 10px', textAlign: 'right' }}>
-                        {p.status === 'PENDING' ? (
-                          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                            {p.seller_upi_id !== 'NOT_SET' ? (
-                              <button
-                                onClick={() => openMarkPaidModal(p)}
-                                style={scanPayBtnStyle}
-                                title="Show UPI QR Code to scan with Google Pay, PhonePe, or Paytm"
-                              >
-                                📸 Scan & Pay (₹{Number(p.net_payout_amount).toFixed(0)})
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => openMarkPaidModal(p)}
-                                style={markPaidBtnStyle}
-                              >
-                                ✓ Mark Paid
-                              </button>
-                            )}
-                          </div>
-                        ) : (
-                          <span style={{ color: '#059669', fontSize: '12px', fontWeight: '600' }}>
-                            Settled on {p.paid_at ? new Date(p.paid_at).toLocaleDateString() : '—'}
-                          </span>
-                        )}
-                      </td>
+            /* ============================================================ */
+            /* TAB 2: PAYOUTS (PENDING, PAID, ALL)                          */
+            /* ============================================================ */
+            payouts.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px 0', color: '#9ca3af' }}>
+                <span style={{ fontSize: '36px' }}>🎉</span>
+                <p style={{ margin: '8px 0 0 0', fontSize: '15px', fontWeight: '600', color: '#374151' }}>
+                  {filter === 'PENDING' ? 'No pending payouts right now!' : 'No records found.'}
+                </p>
+                <p style={{ margin: '4px 0 0 0', fontSize: '13px' }}>
+                  All completed orders have been settled to sellers.
+                </p>
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '2px solid #f3f4f6', color: '#6b7280' }}>
+                      <th style={{ padding: '12px 10px' }}>Order & Date</th>
+                      <th style={{ padding: '12px 10px' }}>Seller</th>
+                      <th style={{ padding: '12px 10px' }}>Seller UPI (VPA)</th>
+                      <th style={{ padding: '12px 10px' }}>Sale Amount</th>
+                      <th style={{ padding: '12px 10px' }}>2% Fee</th>
+                      <th style={{ padding: '12px 10px' }}>Net Payable</th>
+                      <th style={{ padding: '12px 10px' }}>Status</th>
+                      <th style={{ padding: '12px 10px', textAlign: 'right' }}>Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {payouts.map((p) => (
+                      <tr key={p.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                        <td style={{ padding: '14px 10px' }}>
+                          <div style={{ fontWeight: '600', color: '#111827', fontFamily: 'monospace' }}>
+                            #{p.order_id.slice(0, 8)}
+                          </div>
+                          <div style={{ color: '#9ca3af', fontSize: '11px', marginTop: '2px' }}>
+                            {new Date(p.created_at).toLocaleDateString()}
+                          </div>
+                        </td>
+
+                        <td style={{ padding: '14px 10px' }}>
+                          <div style={{ fontWeight: '600', color: '#111827' }}>{p.seller_name}</div>
+                          <div style={{ color: '#6b7280', fontSize: '11px' }}>{p.seller_email}</div>
+                        </td>
+
+                        <td style={{ padding: '14px 10px' }}>
+                          {p.seller_upi_id === 'NOT_SET' ? (
+                            <span style={{ color: '#dc2626', fontWeight: '700', fontSize: '12px' }}>
+                              ⚠️ UPI Not Added Yet
+                            </span>
+                          ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span style={{ fontFamily: 'monospace', fontWeight: '600', background: '#f3f4f6', padding: '3px 7px', borderRadius: '4px' }}>
+                                {p.seller_upi_id}
+                              </span>
+                              <button
+                                onClick={() => handleCopyUpi(p.seller_upi_id, p.id)}
+                                style={copyBtnStyle}
+                                title="Copy UPI ID"
+                              >
+                                {copySuccess === p.id ? '✓ Copied' : 'Copy'}
+                              </button>
+                            </div>
+                          )}
+                          {p.account_holder_name && (
+                            <div style={{ color: '#6b7280', fontSize: '11px', marginTop: '2px' }}>
+                              Name: {p.account_holder_name}
+                            </div>
+                          )}
+                        </td>
+
+                        <td style={{ padding: '14px 10px', fontWeight: '500' }}>
+                          ₹{Number(p.order_amount).toFixed(2)}
+                        </td>
+
+                        <td style={{ padding: '14px 10px', color: '#059669', fontWeight: '600' }}>
+                          ₹{Number(p.commission_amount).toFixed(2)}
+                        </td>
+
+                        <td style={{ padding: '14px 10px' }}>
+                          <span style={{ fontSize: '15px', fontWeight: '800', color: '#111827' }}>
+                            ₹{Number(p.net_payout_amount).toFixed(2)}
+                          </span>
+                        </td>
+
+                        <td style={{ padding: '14px 10px' }}>
+                          {p.status === 'PAID' ? (
+                            <div>
+                              <span style={paidBadgeStyle}>✓ Paid</span>
+                              {p.transaction_reference && (
+                                <div style={{ fontFamily: 'monospace', fontSize: '11px', color: '#6b7280', marginTop: '4px' }}>
+                                  Ref: {p.transaction_reference}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <span style={pendingBadgeStyle}>⏳ Pending</span>
+                          )}
+                        </td>
+
+                        <td style={{ padding: '14px 10px', textAlign: 'right' }}>
+                          {p.status === 'PENDING' ? (
+                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                              {p.seller_upi_id !== 'NOT_SET' ? (
+                                <button
+                                  onClick={() => openMarkPaidModal(p)}
+                                  style={scanPayBtnStyle}
+                                  title="Show UPI QR Code to scan with Google Pay, PhonePe, or Paytm"
+                                >
+                                  📸 Scan & Pay (₹{Number(p.net_payout_amount).toFixed(2)})
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => openMarkPaidModal(p)}
+                                  style={markPaidBtnStyle}
+                                >
+                                  ✓ Mark Paid
+                                </button>
+                              )}
+                            </div>
+                          ) : (
+                            <span style={{ color: '#059669', fontSize: '12px', fontWeight: '600' }}>
+                              Settled on {p.paid_at ? new Date(p.paid_at).toLocaleDateString() : '—'}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
           )}
         </div>
 
@@ -441,6 +680,7 @@ const activeTabStyle: React.CSSProperties = { padding: '8px 14px', border: '1px 
 const refreshBtnStyle: React.CSSProperties = { padding: '8px 14px', border: '1px solid #e5e7eb', borderRadius: '8px', background: '#fff', fontSize: '12px', fontWeight: '600', color: '#374151', cursor: 'pointer' };
 const copyBtnStyle: React.CSSProperties = { padding: '3px 8px', border: '1px solid #d1d5db', borderRadius: '4px', background: '#fff', fontSize: '11px', fontWeight: '600', color: '#374151', cursor: 'pointer' };
 const scanPayBtnStyle: React.CSSProperties = { padding: '8px 14px', backgroundColor: '#059669', color: '#ffffff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', boxShadow: '0 1px 2px rgba(5, 150, 105, 0.2)' };
+const verifyBtnStyle: React.CSSProperties = { padding: '8px 14px', backgroundColor: '#4f46e5', color: '#ffffff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', boxShadow: '0 1px 2px rgba(79, 70, 229, 0.2)' };
 const markPaidBtnStyle: React.CSSProperties = { padding: '8px 14px', backgroundColor: '#111827', color: '#ffffff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' };
 const paidBadgeStyle: React.CSSProperties = { backgroundColor: '#dcfce7', color: '#166534', padding: '4px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700' };
 const pendingBadgeStyle: React.CSSProperties = { backgroundColor: '#fef3c7', color: '#92400e', padding: '4px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700' };
@@ -450,6 +690,7 @@ const modalDetailBoxStyle: React.CSSProperties = { backgroundColor: '#f9fafb', b
 const qrContainerStyle: React.CSSProperties = { backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '16px' };
 const qrBoxStyle: React.CSSProperties = { backgroundColor: '#ffffff', padding: '12px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', display: 'inline-block' };
 const warningBannerStyle: React.CSSProperties = { backgroundColor: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', padding: '12px 14px', borderRadius: '8px', marginBottom: '14px', fontSize: '13px' };
+const infoBannerStyle: React.CSSProperties = { backgroundColor: '#eef2ff', border: '1px solid #c7d2fe', padding: '14px 16px', borderRadius: '10px', marginBottom: '20px' };
 const formLabelStyle: React.CSSProperties = { display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' };
 const inputStyle: React.CSSProperties   = { width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' };
 const primaryBtnStyle: React.CSSProperties = { padding: '10px 18px', backgroundColor: '#111827', color: '#ffffff', borderRadius: '8px', border: 'none', fontSize: '13px', fontWeight: '600', cursor: 'pointer' };

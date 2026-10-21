@@ -23,8 +23,10 @@ const AdminDashboardPage: React.FC = () => {
   const cards = stats
     ? [
         { label: 'Total Users',           value: stats.totalUsers,           color: '#111827' },
+        { label: 'Orders in Escrow',      value: stats.escrowOrdersCount ?? 0, color: (stats.escrowOrdersCount ?? 0) > 0 ? '#4f46e5' : '#111827', link: '/admin/payouts' },
+        { label: 'Pending Payouts',       value: stats.pendingPayoutsCount ?? 0, color: (stats.pendingPayoutsCount ?? 0) > 0 ? '#d97706' : '#111827', link: '/admin/payouts' },
         { label: 'Pending Seller Apps',   value: stats.pendingApplications ?? 0, color: (stats.pendingApplications ?? 0) > 0 ? '#d97706' : '#111827', link: '/admin/users' },
-        { label: 'Pending Payouts',       value: stats.pendingPayoutsCount ?? 0, color: (stats.pendingPayoutsCount ?? 0) > 0 ? '#d97706' : '#059669', link: '/admin/payouts' },
+        { label: 'Platform 2% Kept',      value: `₹${Number(stats.platformCommissionEarned ?? 0).toFixed(2)}`, color: '#059669', link: '/admin/payouts' },
         { label: 'Active Sellers',        value: stats.totalSellers,         color: '#059669' },
         { label: 'Students / Buyers',     value: stats.totalStudents,        color: '#2563eb' },
         { label: 'Admins',                value: stats.totalAdmins,          color: '#7c3aed' },

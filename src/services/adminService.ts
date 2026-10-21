@@ -15,6 +15,8 @@ export interface AdminStats {
   pendingPayoutsCount?: number;
   pendingPayoutsAmount?: number;
   platformCommissionEarned?: number;
+  escrowOrdersCount?: number;
+  escrowOrdersAmount?: number;
 }
 
 export interface AdminUser {
@@ -119,3 +121,35 @@ export async function markPayoutAsPaid(
   );
   return data.payout;
 }
+
+export interface EscrowOrder {
+  id: string;
+  buyer_id: string;
+  total_amount: number;
+  payment_method: string;
+  status: string;
+  delivery_otp: string;
+  meetup_location?: string | null;
+  meetup_time?: string | null;
+  created_at: string;
+  buyer_name: string;
+  buyer_email: string;
+  seller_name: string;
+  seller_email: string;
+  seller_id: string;
+  product_title: string;
+  quantity: number;
+  unit_price: number;
+}
+
+// GET /api/admin/escrow-orders
+export async function fetchEscrowOrders(): Promise<EscrowOrder[]> {
+  const { data } = await api.get<{ orders: EscrowOrder[] }>('/admin/escrow-orders');
+  return data.orders;
+}
+
+// POST /api/admin/orders/:orderId/confirm-delivery
+export async function confirmDeliveryAsAdmin(orderId: string): Promise<void> {
+  await api.post(`/admin/orders/${orderId}/confirm-delivery`);
+}
+
