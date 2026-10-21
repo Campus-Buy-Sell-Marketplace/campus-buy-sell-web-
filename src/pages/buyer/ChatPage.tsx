@@ -2,13 +2,15 @@
 // LAVSA — ChatPage
 // Buyer-seller chat tied to a specific order.
 // Accessed via /chat/:orderId
-// Polls every 4 s for new messages (simple, no WebSocket needed).
+// Real-time bidirectional messaging powered by Socket.IO
 // ============================================================
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { io, Socket } from 'socket.io-client';
 import AppLayout from '../../components/Layout/AppLayout';
 import api from '../../services/api';
+import { API_BASE_URL } from '../../config/appConfig';
 
 interface ChatMessage {
   id: string;
@@ -19,6 +21,8 @@ interface ChatMessage {
   message: string;
   created_at: string;
 }
+
+const SOCKET_URL = API_BASE_URL.replace(/\/api\/?$/, '');
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -56,7 +60,7 @@ const ChatPage: React.FC = () => {
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const pollingRef = useRef<NodeJS.Timeout | null>(null);
+  const socketRef = useRef<Socket | null>(null);
 
   // ── Fetch current user ───────────────────────────────────────────────────
   useEffect(() => {
@@ -71,7 +75,7 @@ const ChatPage: React.FC = () => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // ── Fetch messages ───────────────────────────────────────────────────────
+  // ── Initial fetch of message history ─────────────────────────────────────
   const fetchMessages = useCallback(() => {
     if (!orderId) return;
     api
@@ -80,14 +84,36 @@ const ChatPage: React.FC = () => {
       .catch(() => {});
   }, [orderId]);
 
+  // ── Real-time Socket.IO Connection (replaces HTTP polling) ───────────────
   useEffect(() => {
     fetchMessages();
-    // Poll every 4 seconds for new messages
-    pollingRef.current = setInterval(fetchMessages, 4000);
+
+    if (!orderId) return;
+
+    // Establish WebSocket connection
+    const socket = io(SOCKET_URL, {
+      transports: ['websocket', 'polling'],
+      withCredentials: true,
+    });
+    socketRef.current = socket;
+
+    socket.on('connect', () => {
+      socket.emit('join_order', { orderId });
+    });
+
+    // Listen for incoming real-time messages from other party
+    socket.on('new_message', (incomingMsg: ChatMessage) => {
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === incomingMsg.id)) return prev;
+        return [...prev, incomingMsg];
+      });
+    });
+
     return () => {
-      if (pollingRef.current) clearInterval(pollingRef.current);
+      socket.emit('leave_order', { orderId });
+      socket.disconnect();
     };
-  }, [fetchMessages]);
+  }, [fetchMessages, orderId]);
 
   // ── Send message ─────────────────────────────────────────────────────────
   const handleSend = async () => {
@@ -96,9 +122,14 @@ const ChatPage: React.FC = () => {
 
     setIsSending(true);
     try {
-      await api.post(`/chat/${orderId}`, { message: text });
+      const res = await api.post<{ message: ChatMessage }>(`/chat/${orderId}`, { message: text });
       setNewMessage('');
-      fetchMessages();
+      if (res.data?.message) {
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === res.data.message.id)) return prev;
+          return [...prev, res.data.message];
+        });
+      }
     } catch {
       setError('Failed to send message. Please try again.');
       setTimeout(() => setError(''), 3000);
