@@ -279,7 +279,8 @@ const ProductDetailPage: React.FC = () => {
                   disabled={isAdding || Number(product.stock) === 0}
                   style={{
                     ...addToCartBtnStyle,
-                    backgroundColor: added ? '#000000' : '#111827',
+                    backgroundColor: added ? '#f3f4f6' : '#ffffff',
+                    color: '#111827',
                   }}
                   id="detail-add-to-cart-btn"
                 >
@@ -339,7 +340,7 @@ const ProductDetailPage: React.FC = () => {
 
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-          #detail-add-to-cart-btn:hover:not(:disabled) { background-color: #000000 !important; }
+          #detail-add-to-cart-btn:hover:not(:disabled) { background-color: #f3f4f6 !important; }
           #detail-buy-now-btn:hover:not(:disabled) { background-color: #111827 !important; color: #ffffff !important; }
           #qty-dec:hover, #qty-inc:hover:not(:disabled) { background-color: #e5e7eb !important; }
           #detail-wishlist-btn:hover:not(:disabled) { background-color: #f3f4f6 !important; }
@@ -468,7 +469,7 @@ const actionBtnsStyle: React.CSSProperties = {
 
 const addToCartBtnStyle: React.CSSProperties = {
   padding: '14px', borderRadius: '10px', border: '1.5px solid #111827',
-  backgroundColor: '#111827', color: '#ffffff', fontSize: '15px', fontWeight: '700',
+  backgroundColor: '#ffffff', color: '#111827', fontSize: '15px', fontWeight: '700',
   cursor: 'pointer', transition: 'all 0.18s ease',
   fontFamily: "'Inter', system-ui, sans-serif",
   display: 'flex', alignItems: 'center', justifyContent: 'center',
