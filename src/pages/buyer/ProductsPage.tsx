@@ -4,11 +4,9 @@
 // ============================================================
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import AppLayout from '../../components/Layout/AppLayout';
 import { getProducts, Product } from '../../services/productService';
-import { useCart } from '../../context/CartContext';
-import { useToast } from '../../context/ToastContext';
 import CartButton from '../../components/CartButton/CartButton';
 import { getWishlistIds, addToWishlist, removeFromWishlist } from '../../services/userService';
 
@@ -24,9 +22,6 @@ const CONDITION_COLORS: Record<string, { text: string; bg: string }> = {
 
 const ProductsPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
-  const { addToCart } = useCart();
-  const { showToast } = useToast();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -35,9 +30,6 @@ const ProductsPage: React.FC = () => {
   );
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
   const [inputValue, setInputValue] = useState(searchParams.get('q') || '');
-  const [addingId, setAddingId] = useState<string | null>(null);
-  const [buyingId, setBuyingId] = useState<string | null>(null);
-  const [addedId, setAddedId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [wishlistIds, setWishlistIds] = useState<Set<string>>(new Set());
   const [togglingWishId, setTogglingWishId] = useState<string | null>(null);
@@ -78,35 +70,6 @@ const ProductsPage: React.FC = () => {
     setSearchParams(p);
   };
 
-  const handleAddToCart = async (e: React.MouseEvent, productId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setAddingId(productId);
-    try {
-      await addToCart(productId, 1);
-      setAddedId(productId);
-      const prod = products.find((p) => p.id === productId);
-      showToast(`"${prod?.title || 'Product'}" added to cart!`, 'success');
-      setTimeout(() => setAddedId(null), 2000);
-    } catch (err: any) {
-      showToast(err?.response?.data?.message || 'Failed to add to cart.', 'warning');
-    } finally {
-      setAddingId(null);
-    }
-  };
-
-  const handleBuyNow = async (e: React.MouseEvent, productId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setBuyingId(productId);
-    try {
-      await addToCart(productId, 1);
-      navigate('/cart');
-    } catch (err: any) {
-      showToast(err?.response?.data?.message || 'Failed. Try again.', 'warning');
-      setBuyingId(null);
-    }
-  };
 
   const handleWishlistToggle = async (e: React.MouseEvent, productId: string) => {
     e.preventDefault();
@@ -228,11 +191,7 @@ const ProductsPage: React.FC = () => {
           <div style={gridStyle} className="products-grid">
             {products.map((product) => {
               const cond = CONDITION_COLORS[product.condition || ''];
-              const isAdding = addingId === product.id;
-              const isBuying = buyingId === product.id;
-              const isAdded = addedId === product.id;
               const isWishlisted = wishlistIds.has(product.id);
-              const busy = isAdding || isBuying;
 
               return (
                 <div
@@ -537,21 +496,6 @@ const priceStyle: React.CSSProperties = {
   letterSpacing: '-0.01em',
   display: 'flex',
   alignItems: 'center',
-};
-
-const addBtnStyle: React.CSSProperties = {
-  height: '34px',
-  padding: '0 18px',
-  borderRadius: '7px',
-  border: 'none',
-  color: '#ffffff',
-  fontSize: '12px',
-  fontWeight: '700',
-  letterSpacing: '0.05em',
-  cursor: 'pointer',
-  transition: 'background 0.15s',
-  fontFamily: "'Inter', system-ui, sans-serif",
-  whiteSpace: 'nowrap',
 };
 
 export default ProductsPage;
