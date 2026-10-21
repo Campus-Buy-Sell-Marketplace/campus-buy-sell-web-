@@ -330,14 +330,19 @@ const pageStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  backgroundColor: '#ffffff',
+  backgroundColor: '#f9fafb',
   fontFamily: "'Inter', system-ui, sans-serif",
   padding: '24px',
 };
 
 const cardStyle: React.CSSProperties = {
   width: '100%',
-  maxWidth: '420px',
+  maxWidth: '400px',
+  backgroundColor: '#ffffff',
+  borderRadius: '12px',
+  border: '1px solid #e5e7eb',
+  padding: '36px 32px',
+  boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
 };
 
 const brandContainerStyle: React.CSSProperties = {
@@ -346,9 +351,9 @@ const brandContainerStyle: React.CSSProperties = {
 };
 
 const brandStyle: React.CSSProperties = {
-  fontSize: '38px',
-  fontWeight: '900',
-  letterSpacing: '0.12em',
+  fontSize: '28px',
+  fontWeight: '800',
+  letterSpacing: '-0.02em',
   color: '#111827',
   margin: '0 0 6px 0',
 };
@@ -356,7 +361,7 @@ const brandStyle: React.CSSProperties = {
 const taglineStyle: React.CSSProperties = {
   color: '#9ca3af',
   fontSize: '12px',
-  letterSpacing: '0.15em',
+  letterSpacing: '0.08em',
   textTransform: 'uppercase',
   margin: 0,
   fontWeight: '500',
@@ -364,22 +369,22 @@ const taglineStyle: React.CSSProperties = {
 
 const tabRowStyle: React.CSSProperties = {
   display: 'flex',
-  borderBottom: '2px solid #f3f4f6',
+  borderBottom: '1px solid #e5e7eb',
   marginBottom: '24px',
 };
 
 const tabBtnStyle = (active: boolean): React.CSSProperties => ({
   flex: 1,
-  padding: '10px 0',
+  padding: '9px 0',
   background: 'none',
   border: 'none',
   borderBottom: active ? '2px solid #111827' : '2px solid transparent',
-  marginBottom: '-2px',
+  marginBottom: '-1px',
   color: active ? '#111827' : '#9ca3af',
   fontWeight: active ? '700' : '500',
-  fontSize: '14px',
+  fontSize: '13px',
   cursor: 'pointer',
-  transition: 'all 0.2s ease',
+  transition: 'all 0.15s ease',
   fontFamily: "'Inter', system-ui, sans-serif",
   letterSpacing: '0.01em',
 });
@@ -387,7 +392,7 @@ const tabBtnStyle = (active: boolean): React.CSSProperties => ({
 const errorBoxStyle: React.CSSProperties = {
   backgroundColor: '#fef2f2',
   border: '1px solid #fecaca',
-  borderRadius: '8px',
+  borderRadius: '6px',
   padding: '10px 14px',
   color: '#dc2626',
   fontSize: '13px',
@@ -408,21 +413,22 @@ const fieldGroupStyle: React.CSSProperties = {
 
 const labelStyle: React.CSSProperties = {
   color: '#374151',
-  fontSize: '13px',
+  fontSize: '12px',
   fontWeight: '600',
+  letterSpacing: '0.01em',
 };
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
-  padding: '11px 14px',
-  borderRadius: '8px',
-  border: '1.5px solid #e5e7eb',
-  backgroundColor: '#ffffff',
+  padding: '10px 14px',
+  borderRadius: '7px',
+  border: '1px solid #e5e7eb',
+  backgroundColor: '#f9fafb',
   color: '#111827',
   fontSize: '14px',
   outline: 'none',
   boxSizing: 'border-box',
-  transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+  transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
   fontFamily: "'Inter', system-ui, sans-serif",
 };
 
@@ -441,17 +447,17 @@ const eyeBtnStyle: React.CSSProperties = {
 
 const submitBtnStyle = (disabled: boolean): React.CSSProperties => ({
   width: '100%',
-  padding: '12px',
-  borderRadius: '8px',
+  padding: '11px',
+  borderRadius: '7px',
   border: 'none',
-  backgroundColor: disabled ? '#9ca3af' : '#111827',
+  backgroundColor: disabled ? '#d1d5db' : '#111827',
   color: '#ffffff',
-  fontSize: '15px',
+  fontSize: '14px',
   fontWeight: '600',
   cursor: disabled ? 'not-allowed' : 'pointer',
-  transition: 'background-color 0.2s ease',
+  transition: 'background-color 0.15s ease',
   marginTop: '4px',
-  letterSpacing: '0.02em',
+  letterSpacing: '0.01em',
   fontFamily: "'Inter', system-ui, sans-serif",
 });
 
@@ -459,7 +465,7 @@ const dividerStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: '12px',
-  margin: '22px 0',
+  margin: '20px 0',
 };
 
 const dividerLineStyle: React.CSSProperties = {
@@ -470,7 +476,7 @@ const dividerLineStyle: React.CSSProperties = {
 
 const dividerTextStyle: React.CSSProperties = {
   color: '#9ca3af',
-  fontSize: '12px',
+  fontSize: '11px',
   whiteSpace: 'nowrap',
 };
 
@@ -483,7 +489,7 @@ const footerStyle: React.CSSProperties = {
   textAlign: 'center',
   color: '#9ca3af',
   fontSize: '11px',
-  marginTop: '24px',
+  marginTop: '20px',
   marginBottom: 0,
 };
 

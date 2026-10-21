@@ -217,20 +217,20 @@ const ChatPage: React.FC = () => {
     bubble: (isMine: boolean): React.CSSProperties => ({
       alignSelf: isMine ? 'flex-end' : 'flex-start',
       maxWidth: '75%',
-      background: isMine ? '#6366f1' : '#f1f5f9',
+      background: isMine ? '#111827' : '#f1f5f9',
       color: isMine ? '#fff' : '#1e293b',
       borderRadius: isMine ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
       padding: '10px 14px',
       fontSize: '14px',
       lineHeight: 1.5,
       boxShadow: isMine
-        ? '0 2px 8px rgba(99,102,241,0.25)'
+        ? '0 2px 8px rgba(17,24,39,0.18)'
         : '0 2px 8px rgba(0,0,0,0.06)',
       marginBottom: '2px',
     }),
     bubbleMeta: (isMine: boolean): React.CSSProperties => ({
       fontSize: '11px',
-      color: isMine ? '#c7d2fe' : '#94a3b8',
+      color: isMine ? '#9ca3af' : '#94a3b8',
       marginTop: '4px',
       textAlign: isMine ? 'right' : 'left',
     }),
@@ -238,7 +238,7 @@ const ChatPage: React.FC = () => {
       fontWeight: 600,
       marginBottom: '2px',
       fontSize: '12px',
-      color: '#6366f1',
+      color: '#111827',
     },
     inputRow: {
       display: 'flex',
@@ -264,7 +264,7 @@ const ChatPage: React.FC = () => {
       color: '#1e293b',
     },
     sendBtn: {
-      background: '#6366f1',
+      background: '#111827',
       color: '#fff',
       border: 'none',
       borderRadius: '14px',
@@ -327,9 +327,11 @@ const ChatPage: React.FC = () => {
         <div style={s.chatBody}>
           {grouped.length === 0 ? (
             <div style={s.empty}>
-              <span style={{ fontSize: '40px' }}>💬</span>
-              <p style={{ fontWeight: 600 }}>No messages yet</p>
-              <p style={{ fontSize: '13px' }}>Say hi to coordinate your meetup!</p>
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              </svg>
+              <p style={{ fontWeight: 600, color: '#374151' }}>No messages yet</p>
+              <p style={{ fontSize: '13px', color: '#9ca3af' }}>Say hi to coordinate your meetup!</p>
             </div>
           ) : (
             grouped.map((group) => (

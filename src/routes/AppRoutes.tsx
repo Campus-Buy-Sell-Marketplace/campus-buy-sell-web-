@@ -90,22 +90,8 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
-      <Route
-        path="/products"
-        element={
-          <ProtectedRoute>
-            <ProductsPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/products/:id"
-        element={
-          <ProtectedRoute>
-            <ProductDetailPage />
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/products" element={<Navigate to="/home" replace />} />
+      <Route path="/products/:id" element={<ProductDetailPage />} />
       <Route
         path="/orders"
         element={

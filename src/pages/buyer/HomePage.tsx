@@ -1,15 +1,19 @@
 // ============================================================
-// LAVSA — Buyer Home Page — Premium White Theme
+// LAVSA — Unified Buyer Marketplace (Home & Products)
+// Single unified marketplace with category pills and search
 // ============================================================
 
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import AppLayout from '../../components/Layout/AppLayout';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { useToast } from '../../context/ToastContext';
+import CartButton from '../../components/CartButton/CartButton';
 import { getProducts, Product } from '../../services/productService';
 import { getWishlistIds, addToWishlist, removeFromWishlist } from '../../services/userService';
+
+const CATEGORIES = ['All', 'Electronics', 'Books', 'Clothing', 'Furniture', 'Sports', 'Other'];
 
 const CONDITION_COLORS: Record<string, string> = {
   NEW:      '#059669',
@@ -30,54 +34,72 @@ const CONDITION_BG: Record<string, string> = {
 const HomePage: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { addToCart } = useCart();
   const { showToast } = useToast();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [addingId, setAddingId] = useState<string | null>(null);
-  const [addedId, setAddedId] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>(searchParams.get('category') || 'All');
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
+  const [inputValue, setInputValue] = useState(searchParams.get('q') || '');
   const [wishlistIds, setWishlistIds] = useState<Set<string>>(new Set());
   const [togglingWishId, setTogglingWishId] = useState<string | null>(null);
 
+  // Sync state with URL params
+  useEffect(() => {
+    const cat = searchParams.get('category') || 'All';
+    const q = searchParams.get('q') || '';
+    setSelectedCategory(cat);
+    setSearchQuery(q);
+    setInputValue(q);
+  }, [searchParams]);
+
+  // Fetch products
+  const fetchProducts = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const params: Record<string, string> = {};
+      if (selectedCategory !== 'All') params.category = selectedCategory;
+      if (searchQuery.trim()) params.q = searchQuery.trim();
+      const res = await getProducts(params);
+      setProducts(res.products);
+    } catch {
+      setProducts([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [selectedCategory, searchQuery]);
 
   useEffect(() => {
-    getProducts({ limit: 12 })
-      .then((res) => setProducts(res.products))
-      .catch(() => {})
-      .finally(() => setIsLoading(false));
+    fetchProducts();
+  }, [fetchProducts]);
+
+  useEffect(() => {
     getWishlistIds().then((ids) => setWishlistIds(new Set(ids))).catch(() => {});
   }, []);
 
-  const handleAddToCart = async (e: React.MouseEvent, productId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setAddingId(productId);
-    try {
-      await addToCart(productId, 1);
-      setAddedId(productId);
-      const prod = products.find((p) => p.id === productId);
-      showToast(`"${prod?.title || 'Product'}" added to cart!`, 'success');
-      setTimeout(() => setAddedId(null), 2000);
-    } catch (err: any) {
-      showToast(err?.response?.data?.message || 'Failed to add to cart.', 'warning');
-    } finally {
-      setAddingId(null);
+  const handleCategoryChange = (cat: string) => {
+    setSelectedCategory(cat);
+    const newParams = new URLSearchParams(searchParams);
+    if (cat === 'All') {
+      newParams.delete('category');
+    } else {
+      newParams.set('category', cat);
     }
+    setSearchParams(newParams);
   };
 
-  const handleBuyNow = async (e: React.MouseEvent, productId: string) => {
+  const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    e.stopPropagation();
-    setAddingId(productId);
-    try {
-      await addToCart(productId, 1);
-      navigate('/cart');
-    } catch (err: any) {
-      showToast(err?.response?.data?.message || 'Failed. Try again.', 'warning');
-      setAddingId(null);
+    setSearchQuery(inputValue.trim());
+    const newParams = new URLSearchParams(searchParams);
+    if (inputValue.trim()) {
+      newParams.set('q', inputValue.trim());
+    } else {
+      newParams.delete('q');
     }
+    setSearchParams(newParams);
   };
 
   const handleWishlistToggle = async (e: React.MouseEvent, productId: string) => {
@@ -88,109 +110,86 @@ const HomePage: React.FC = () => {
     try {
       if (wishlistIds.has(productId)) {
         await removeFromWishlist(productId);
-        setWishlistIds((prev) => { const s = new Set(prev); s.delete(productId); return s; });
+        setWishlistIds((prev) => {
+          const s = new Set(prev);
+          s.delete(productId);
+          return s;
+        });
       } else {
         await addToWishlist(productId);
         setWishlistIds((prev) => new Set(prev).add(productId));
       }
-    } catch { /* silent */ } finally {
+    } catch {
+      /* silent */
+    } finally {
       setTogglingWishId(null);
     }
   };
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/products?q=${encodeURIComponent(searchQuery.trim())}`);
-    } else {
-      navigate('/products');
-    }
-  };
-
-  const firstName = user?.name?.split(' ')[0] || 'there';
 
   return (
     <AppLayout>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
         * { box-sizing: border-box; }
-        .home-product-card { transition: transform 0.22s cubic-bezier(.4,0,.2,1), box-shadow 0.22s ease !important; }
-        .home-product-card:hover { transform: translateY(-4px) !important; box-shadow: 0 20px 48px rgba(0,0,0,0.10) !important; }
-        .btn-cart:hover { background: #1d4ed8 !important; }
-        .btn-buy:hover { background: #111827 !important; }
+        .home-product-card { transition: transform 0.18s ease, box-shadow 0.18s ease !important; }
+        .home-product-card:hover { transform: translateY(-2px) !important; box-shadow: 0 8px 24px rgba(0,0,0,0.09) !important; }
         .wish-btn:hover { transform: scale(1.15); }
-        .search-home-input:focus { outline: none; border-color: #6366f1 !important; box-shadow: 0 0 0 3px rgba(99,102,241,0.12) !important; }
-        .cat-pill:hover { background: #f1f5f9 !important; border-color: #94a3b8 !important; }
-        .cat-pill-active { background: #111827 !important; color: #fff !important; border-color: #111827 !important; }
+        .search-home-input:focus { outline: none; border-color: #111827 !important; }
+        .cat-pill:hover { background-color: #f3f4f6 !important; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-        .fade-in { animation: fadeIn 0.35s ease forwards; }
-        @media (max-width: 640px) {
-          .hero-title { font-size: 26px !important; }
-          .hero-sub { font-size: 14px !important; }
-          .search-home-row { flex-direction: column !important; }
-          .search-home-input { border-radius: 10px !important; border-right: 1.5px solid #e2e8f0 !important; }
-          .search-home-btn { border-radius: 10px !important; }
-        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { animation: fadeIn 0.3s ease forwards; }
+        .cat-scroll::-webkit-scrollbar { display: none; }
       `}</style>
 
       <div style={{ fontFamily: "'Inter', system-ui, sans-serif", maxWidth: '1200px', margin: '0 auto' }}>
+        {/* ── Search Bar ── */}
+        <div style={{ marginBottom: '18px', marginTop: '4px' }}>
+          <form onSubmit={handleSearch} style={{ display: 'flex', gap: '0', maxWidth: '540px' }} className="search-home-row">
+            <input
+              type="text"
+              placeholder="Search products by title, category, or seller..."
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              style={searchInputStyle}
+              className="search-home-input"
+              id="home-search-input"
+            />
+            <button type="submit" style={searchBtnStyle} className="search-home-btn" id="home-search-btn">
+              Search
+            </button>
+          </form>
+        </div>
 
-        {/* ── Hero Banner ── */}
-        <div style={heroStyle}>
-          <div style={{ maxWidth: '580px' }}>
-            <div style={greetChipStyle}>👋 Welcome back, {firstName}!</div>
-            <h1 className="hero-title" style={heroTitleStyle}>
-              Find the best deals<br />on campus today
-            </h1>
-            <p className="hero-sub" style={heroSubStyle}>
-              Browse student-listed products — textbooks, electronics, clothing & more.
-            </p>
-            <form onSubmit={handleSearch} style={{ display: 'flex', gap: '0', maxWidth: '480px' }} className="search-home-row">
-              <input
-                type="text"
-                placeholder="Search for anything..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                style={searchInputStyle}
-                className="search-home-input"
-                id="home-search-input"
-              />
-              <button type="submit" style={searchBtnStyle} className="search-home-btn" id="home-search-btn">
-                Search
+        {/* ── Category Pills ── */}
+        <div style={catRowStyle} className="cat-scroll">
+          {CATEGORIES.map((cat) => {
+            const active = selectedCategory === cat;
+            return (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => handleCategoryChange(cat)}
+                style={catPillStyle(active)}
+                className="cat-pill"
+                id={`cat-${cat.toLowerCase()}`}
+              >
+                {cat}
               </button>
-            </form>
-          </div>
-
-          {/* Quick links */}
-          <div style={quickLinksStyle}>
-            {[
-              { to: '/products?category=Electronics', icon: '💻', label: 'Electronics' },
-              { to: '/products?category=Books', icon: '📚', label: 'Books' },
-              { to: '/products?category=Clothing', icon: '👕', label: 'Clothing' },
-              { to: '/products?category=Sports', icon: '⚽', label: 'Sports' },
-            ].map((q) => (
-              <Link key={q.to} to={q.to} style={quickLinkStyle}>
-                <span style={{ fontSize: '22px' }}>{q.icon}</span>
-                <span style={{ fontSize: '12px', fontWeight: '600', color: '#475569' }}>{q.label}</span>
-              </Link>
-            ))}
-          </div>
+            );
+          })}
         </div>
 
         {/* ── Section header ── */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
           <div>
             <h2 style={{ fontSize: '20px', fontWeight: '700', color: '#0f172a', margin: 0 }}>
-              Latest Listings
+              {selectedCategory === 'All' ? 'All Products' : selectedCategory}
             </h2>
             <p style={{ fontSize: '13px', color: '#94a3b8', margin: '3px 0 0 0' }}>
-              {isLoading ? 'Loading...' : `${products.length} products available`}
+              {isLoading ? 'Loading...' : `${products.length} product${products.length !== 1 ? 's' : ''} available`}
             </p>
           </div>
-          <Link to="/products" style={viewAllStyle}>
-            View all →
-          </Link>
         </div>
 
         {/* ── Loading ── */}
@@ -204,9 +203,15 @@ const HomePage: React.FC = () => {
         {/* ── Empty ── */}
         {!isLoading && products.length === 0 && (
           <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-            <div style={{ fontSize: '52px', marginBottom: '14px' }}>🛍️</div>
-            <h3 style={{ color: '#334155', fontWeight: '700', margin: '0 0 8px' }}>No products yet</h3>
-            <p style={{ color: '#94a3b8', fontSize: '14px' }}>Be the first to list something for sale!</p>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '14px' }}>
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+                <line x1="3" y1="6" x2="21" y2="6"/>
+                <path d="M16 10a4 4 0 0 1-8 0"/>
+              </svg>
+            </div>
+            <h3 style={{ color: '#334155', fontWeight: '700', margin: '0 0 8px' }}>No products found</h3>
+            <p style={{ color: '#94a3b8', fontSize: '14px' }}>Try searching for something else or pick another category.</p>
           </div>
         )}
 
@@ -214,11 +219,8 @@ const HomePage: React.FC = () => {
         {!isLoading && products.length > 0 && (
           <div style={gridStyle} className="fade-in">
             {products.map((product) => {
-
               const condColor = CONDITION_COLORS[product.condition || ''] || '#6b7280';
               const condBg = CONDITION_BG[product.condition || ''] || '#f8fafc';
-              const isAdding = addingId === product.id;
-              const isAdded = addedId === product.id;
               const isWishlisted = wishlistIds.has(product.id);
 
               return (
@@ -227,14 +229,18 @@ const HomePage: React.FC = () => {
                   className="home-product-card fade-in"
                   style={cardOuterStyle}
                 >
-                  {/* Image */}
-                  <Link to={`/products/${product.id}`} style={{ textDecoration: 'none', display: 'block' }}>
+                  {/* Image & Body */}
+                  <Link to={`/products/${product.id}`} style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', flex: 1 }}>
                     <div style={cardImageWrapStyle}>
                       {product.image_url ? (
                         <img src={product.image_url} alt={product.title} style={cardImageStyle} loading="lazy" />
                       ) : (
                         <div style={noImageStyle}>
-                          <span style={{ fontSize: '40px' }}>📦</span>
+                          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                            <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                            <line x1="12" y1="22.08" x2="12" y2="12"/>
+                          </svg>
                         </div>
                       )}
 
@@ -247,14 +253,26 @@ const HomePage: React.FC = () => {
 
                       {/* Wishlist heart */}
                       <button
+                        type="button"
                         onClick={(e) => handleWishlistToggle(e, product.id)}
-                        style={{ ...heartBtnStyle, color: isWishlisted ? '#ef4444' : '#94a3b8' }}
+                        style={heartBtnStyle}
                         className="wish-btn"
                         disabled={togglingWishId === product.id}
                         id={`wish-home-${product.id}`}
                         title={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
                       >
-                        {isWishlisted ? '♥' : '♡'}
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill={isWishlisted ? '#ef4444' : 'none'}
+                          stroke={isWishlisted ? '#ef4444' : '#64748b'}
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                        </svg>
                       </button>
                     </div>
 
@@ -262,57 +280,25 @@ const HomePage: React.FC = () => {
                     <div style={cardBodyStyle}>
                       <div style={cardCatStyle}>{product.category || 'General'}</div>
                       <h3 style={cardTitleStyle}>{product.title}</h3>
-                      {product.description && (
-                        <p style={cardDescStyle}>
-                          {product.description.length > 65
-                            ? product.description.slice(0, 65) + '…'
-                            : product.description}
-                        </p>
-                      )}
                       <div style={cardSellerStyle}>by {product.seller_name}</div>
                     </div>
                   </Link>
 
-                  {/* Price + Actions */}
+                  {/* Price + ADD / Stepper */}
                   <div style={cardFootStyle}>
-                    <div style={cardPriceStyle}>₹{Number(product.price).toLocaleString('en-IN', { minimumFractionDigits: 0 })}</div>
-                    <div style={{ display: 'flex', gap: '6px' }}>
-                      <button
-                        onClick={(e) => handleAddToCart(e, product.id)}
-                        style={{
-                          ...cartBtnStyle,
-                          opacity: isAdding ? 0.7 : 1,
-                          background: isAdded ? '#059669' : '#2563eb',
-                        }}
-                        disabled={isAdding}
-                        className="btn-cart"
-                        id={`cart-home-${product.id}`}
-                      >
-                        {isAdding ? '…' : isAdded ? '✓' : '🛒'}
-                      </button>
-                      <button
-                        onClick={(e) => handleBuyNow(e, product.id)}
-                        style={{ ...buyBtnStyle, opacity: isAdding ? 0.7 : 1 }}
-                        disabled={isAdding}
-                        className="btn-buy"
-                        id={`buy-home-${product.id}`}
-                      >
-                        Buy Now
-                      </button>
+                    <div style={cardPriceStyle}>
+                      ₹{Number(product.price).toLocaleString('en-IN', { minimumFractionDigits: 0 })}
                     </div>
+                    <CartButton
+                      productId={product.id}
+                      stock={product.stock}
+                      productTitle={product.title}
+                      id={`add-home-${product.id}`}
+                    />
                   </div>
                 </div>
               );
             })}
-          </div>
-        )}
-
-        {/* ── View All button ── */}
-        {!isLoading && products.length > 0 && (
-          <div style={{ textAlign: 'center', marginTop: '40px', paddingBottom: '20px' }}>
-            <Link to="/products" style={viewAllBtnStyle}>
-              Browse All Products →
-            </Link>
           </div>
         )}
       </div>
@@ -322,115 +308,65 @@ const HomePage: React.FC = () => {
 
 // ── Styles ─────────────────────────────────────────────────────────────────────
 
-const heroStyle: React.CSSProperties = {
-  background: 'linear-gradient(135deg, #f8faff 0%, #f0f4ff 50%, #faf5ff 100%)',
-  borderRadius: '20px',
-  padding: '40px 36px',
-  marginBottom: '36px',
-  border: '1px solid #e8eaf6',
-  display: 'flex',
-  flexWrap: 'wrap',
-  gap: '28px',
-  alignItems: 'flex-start',
-  justifyContent: 'space-between',
-};
-
-const greetChipStyle: React.CSSProperties = {
-  display: 'inline-block',
-  background: 'rgba(99,102,241,0.1)',
-  color: '#4f46e5',
-  fontSize: '13px',
-  fontWeight: '600',
-  borderRadius: '20px',
-  padding: '4px 14px',
-  marginBottom: '14px',
-};
-
-const heroTitleStyle: React.CSSProperties = {
-  fontSize: '32px',
-  fontWeight: '800',
-  color: '#0f172a',
-  lineHeight: '1.25',
-  margin: '0 0 12px 0',
-  letterSpacing: '-0.02em',
-};
-
-const heroSubStyle: React.CSSProperties = {
-  fontSize: '15px',
-  color: '#64748b',
-  margin: '0 0 24px 0',
-  lineHeight: '1.6',
-};
-
 const searchInputStyle: React.CSSProperties = {
   flex: 1,
-  height: '46px',
+  height: '44px',
   padding: '0 16px',
-  borderRadius: '12px 0 0 12px',
-  border: '1.5px solid #e2e8f0',
+  borderRadius: '8px 0 0 8px',
+  border: '1px solid #e5e7eb',
   borderRight: 'none',
   backgroundColor: '#ffffff',
-  color: '#0f172a',
+  color: '#111827',
   fontSize: '14px',
   fontFamily: "'Inter', system-ui, sans-serif",
-  transition: 'border-color 0.15s, box-shadow 0.15s',
+  transition: 'border-color 0.15s',
   minWidth: 0,
 };
 
 const searchBtnStyle: React.CSSProperties = {
-  height: '46px',
+  height: '44px',
   padding: '0 22px',
-  borderRadius: '0 12px 12px 0',
-  border: '1.5px solid #6366f1',
-  backgroundColor: '#6366f1',
+  borderRadius: '0 8px 8px 0',
+  border: '1px solid #111827',
+  backgroundColor: '#111827',
   color: '#ffffff',
   cursor: 'pointer',
-  fontSize: '14px',
-  fontWeight: '600',
+  fontSize: '13px',
+  fontWeight: '700',
+  letterSpacing: '0.04em',
   fontFamily: "'Inter', system-ui, sans-serif",
   whiteSpace: 'nowrap',
   transition: 'background 0.15s',
 };
 
-const quickLinksStyle: React.CSSProperties = {
+const catRowStyle: React.CSSProperties = {
   display: 'flex',
-  flexDirection: 'column',
-  gap: '10px',
-  alignSelf: 'center',
+  gap: '8px',
+  flexWrap: 'wrap',
+  marginBottom: '22px',
+  overflowX: 'auto',
+  paddingBottom: '2px',
 };
 
-const quickLinkStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '10px',
-  padding: '10px 16px',
-  borderRadius: '12px',
-  backgroundColor: '#ffffff',
-  border: '1px solid #e8eaf6',
-  textDecoration: 'none',
-  boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
-  transition: 'box-shadow 0.15s',
-  minWidth: '150px',
-};
-
-const viewAllStyle: React.CSSProperties = {
-  fontSize: '13.5px',
-  fontWeight: '600',
-  color: '#6366f1',
-  textDecoration: 'none',
-  padding: '6px 14px',
-  borderRadius: '8px',
-  border: '1.5px solid #e0e7ff',
-  background: '#f5f3ff',
-  transition: 'all 0.15s',
+const catPillStyle = (active: boolean): React.CSSProperties => ({
+  padding: '6px 16px',
+  borderRadius: '20px',
+  border: `1px solid ${active ? '#111827' : '#e5e7eb'}`,
+  backgroundColor: active ? '#111827' : '#ffffff',
+  color: active ? '#ffffff' : '#374151',
+  fontSize: '12px',
+  fontWeight: active ? '700' : '500',
+  cursor: 'pointer',
+  fontFamily: "'Inter', system-ui, sans-serif",
   whiteSpace: 'nowrap',
-};
+  transition: 'all 0.15s ease',
+});
 
 const spinnerStyle: React.CSSProperties = {
-  width: '36px',
-  height: '36px',
-  border: '3px solid #e2e8f0',
-  borderTop: '3px solid #6366f1',
+  width: '32px',
+  height: '32px',
+  border: '2.5px solid #e5e7eb',
+  borderTop: '2.5px solid #111827',
   borderRadius: '50%',
   margin: '0 auto',
   animation: 'spin 0.8s linear infinite',
@@ -444,13 +380,14 @@ const gridStyle: React.CSSProperties = {
 
 const cardOuterStyle: React.CSSProperties = {
   backgroundColor: '#ffffff',
-  borderRadius: '16px',
-  border: '1px solid #f1f5f9',
+  borderRadius: '10px',
+  border: '1px solid #e5e7eb',
   overflow: 'hidden',
   display: 'flex',
   flexDirection: 'column',
-  boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+  height: '100%',
   cursor: 'pointer',
+  boxSizing: 'border-box',
 };
 
 const cardImageWrapStyle: React.CSSProperties = {
@@ -473,7 +410,7 @@ const noImageStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  background: 'linear-gradient(135deg, #f8fafc, #f1f5f9)',
+  background: '#f3f4f6',
 };
 
 const condBadgeStyle: React.CSSProperties = {
@@ -500,7 +437,6 @@ const heartBtnStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  fontSize: '16px',
   cursor: 'pointer',
   boxShadow: '0 2px 6px rgba(0,0,0,0.12)',
   transition: 'transform 0.15s, color 0.15s',
@@ -509,6 +445,8 @@ const heartBtnStyle: React.CSSProperties = {
 
 const cardBodyStyle: React.CSSProperties = {
   padding: '14px 16px 8px',
+  display: 'flex',
+  flexDirection: 'column',
   flex: 1,
 };
 
@@ -526,34 +464,32 @@ const cardTitleStyle: React.CSSProperties = {
   fontWeight: '700',
   color: '#0f172a',
   margin: '0 0 5px 0',
-  lineHeight: '1.4',
+  lineHeight: '1.35',
+  height: '38px',
   display: '-webkit-box',
   WebkitLineClamp: 2,
   WebkitBoxOrient: 'vertical',
   overflow: 'hidden',
 };
 
-const cardDescStyle: React.CSSProperties = {
-  fontSize: '12px',
-  color: '#64748b',
-  margin: '0 0 4px 0',
-  lineHeight: '1.5',
-};
-
 const cardSellerStyle: React.CSSProperties = {
   fontSize: '11px',
   color: '#94a3b8',
   fontWeight: '500',
+  margin: '0',
+  marginTop: 'auto',
 };
 
 const cardFootStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
-  padding: '12px 16px',
-  borderTop: '1px solid #f1f5f9',
-  backgroundColor: '#fafbfc',
+  padding: '10px 16px 12px',
+  borderTop: '1px solid #f3f4f6',
   gap: '8px',
+  marginTop: 'auto',
+  minHeight: '56px',
+  boxSizing: 'border-box',
 };
 
 const cardPriceStyle: React.CSSProperties = {
@@ -561,51 +497,8 @@ const cardPriceStyle: React.CSSProperties = {
   fontWeight: '800',
   color: '#0f172a',
   letterSpacing: '-0.01em',
-};
-
-const cartBtnStyle: React.CSSProperties = {
-  width: '36px',
-  height: '36px',
-  borderRadius: '10px',
-  border: 'none',
-  color: '#ffffff',
-  fontSize: '15px',
-  cursor: 'pointer',
   display: 'flex',
   alignItems: 'center',
-  justifyContent: 'center',
-  transition: 'background 0.15s, transform 0.1s',
-  flexShrink: 0,
-  fontFamily: "'Inter', system-ui, sans-serif",
-};
-
-const buyBtnStyle: React.CSSProperties = {
-  height: '36px',
-  padding: '0 14px',
-  borderRadius: '10px',
-  border: 'none',
-  backgroundColor: '#0f172a',
-  color: '#ffffff',
-  fontSize: '12px',
-  fontWeight: '700',
-  cursor: 'pointer',
-  transition: 'background 0.15s',
-  fontFamily: "'Inter', system-ui, sans-serif",
-  whiteSpace: 'nowrap',
-  letterSpacing: '0.01em',
-};
-
-const viewAllBtnStyle: React.CSSProperties = {
-  display: 'inline-block',
-  padding: '13px 32px',
-  borderRadius: '12px',
-  backgroundColor: '#0f172a',
-  color: '#ffffff',
-  fontSize: '14px',
-  fontWeight: '700',
-  textDecoration: 'none',
-  transition: 'background 0.15s',
-  letterSpacing: '0.01em',
 };
 
 export default HomePage;

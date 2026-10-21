@@ -33,13 +33,13 @@ interface SellerOrder {
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {
-  PENDING_MEETUP:      { label: '⏳ Awaiting Meetup',         color: '#92400e', bg: '#fffbeb' },
-  PAID_PENDING_MEETUP: { label: '✅ Paid · Awaiting Meetup', color: '#1e40af', bg: '#eff6ff' },
-  PENDING_PAYMENT:     { label: '💳 Payment Pending',         color: '#b45309', bg: '#fef3c7' },
-  COMPLETED:           { label: '✅ Completed',               color: '#065f46', bg: '#f0fdf4' },
-  CANCELLED:           { label: '❌ Cancelled',                color: '#991b1b', bg: '#fef2f2' },
-  CONFIRMED:           { label: '✅ Confirmed',                 color: '#065f46', bg: '#f0fdf4' },
-  PENDING:             { label: '⏳ Pending',                   color: '#92400e', bg: '#fffbeb' },
+  PENDING_MEETUP:      { label: 'Awaiting Meetup',         color: '#92400e', bg: '#fffbeb' },
+  PAID_PENDING_MEETUP: { label: 'Paid · Awaiting Meetup', color: '#1e40af', bg: '#eff6ff' },
+  PENDING_PAYMENT:     { label: 'Payment Pending',         color: '#b45309', bg: '#fef3c7' },
+  COMPLETED:           { label: 'Completed',               color: '#065f46', bg: '#f0fdf4' },
+  CANCELLED:           { label: 'Cancelled',                color: '#991b1b', bg: '#fef2f2' },
+  CONFIRMED:           { label: 'Confirmed',                 color: '#065f46', bg: '#f0fdf4' },
+  PENDING:             { label: 'Pending',                   color: '#92400e', bg: '#fffbeb' },
 };
 
 const SellerOrdersPage: React.FC = () => {
@@ -132,7 +132,7 @@ const SellerOrdersPage: React.FC = () => {
                       Order #{order.id.slice(0, 8).toUpperCase()}
                     </span>
                     <span style={{ fontSize: '13px', fontWeight: '600', color: '#374151' }}>
-                      👤 {order.buyer_name}
+                      {order.buyer_name}
                     </span>
                     <span style={{ fontSize: '12px', color: '#9ca3af', display: 'block' }}>
                       {order.buyer_email}
@@ -148,7 +148,7 @@ const SellerOrdersPage: React.FC = () => {
                       {statusInfo.label}
                     </span>
                     <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
-                      {order.payment_method === 'OFFLINE' ? '💵 Cash at Meetup' : '💳 Online'}
+                      {order.payment_method === 'OFFLINE' ? 'Cash at Meetup' : 'Online'}
                     </div>
                   </div>
                 </div>
@@ -185,17 +185,17 @@ const SellerOrdersPage: React.FC = () => {
                 {order.meetup_location && (
                   <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '10px 14px', marginTop: '12px', fontSize: '13px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#166534', fontWeight: '700', marginBottom: '4px' }}>
-                      <span>📍 Handover Spot:</span>
+                      <span>Handover Spot:</span>
                       <span>{order.meetup_location}</span>
                     </div>
                     {order.meetup_time && (
                       <div style={{ color: '#15803d', fontSize: '12px', marginBottom: order.meetup_notes ? '4px' : '0' }}>
-                        ⏰ <strong>Scheduled Meetup:</strong> {order.meetup_time}
+                        <strong>Scheduled Meetup:</strong> {order.meetup_time}
                       </div>
                     )}
                     {order.meetup_notes && (
                       <div style={{ color: '#166534', fontSize: '12px', fontStyle: 'italic', marginTop: '2px' }}>
-                        📝 Note from buyer: "{order.meetup_notes}"
+                        Note from buyer: "{order.meetup_notes}"
                       </div>
                     )}
                   </div>
@@ -204,7 +204,7 @@ const SellerOrdersPage: React.FC = () => {
                 {/* ── OTP Verification Panel (only for PENDING_MEETUP) ── */}
                 {isPending && (
                   <div style={otpPanelStyle}>
-                    <p style={otpTitleStyle}>🔑 Enter Delivery OTP</p>
+                    <p style={otpTitleStyle}>Enter Delivery OTP</p>
                     <p style={otpHintStyle}>
                       Ask the buyer to share their 6-digit OTP <strong>after you hand over the item</strong>.
                       {order.payment_method === 'OFFLINE' && ' Collect cash payment first.'}
@@ -237,18 +237,18 @@ const SellerOrdersPage: React.FC = () => {
                     </div>
 
                     {otpErrors[order.id] && (
-                      <p style={otpErrStyle}>❌ {otpErrors[order.id]}</p>
+                      <p style={otpErrStyle}>{otpErrors[order.id]}</p>
                     )}
                   </div>
                 )}
 
                 {/* Success message after OTP verified */}
                 {otpSuccess[order.id] && (
-                  <div style={successNoteStyle}>✅ {otpSuccess[order.id]}</div>
+                  <div style={successNoteStyle}>{otpSuccess[order.id]}</div>
                 )}
 
                 {order.status === 'COMPLETED' && !otpSuccess[order.id] && (
-                  <div style={completedNoteStyle}>✅ Delivery confirmed. OTP was verified.</div>
+                  <div style={completedNoteStyle}>Delivery confirmed. OTP was verified.</div>
                 )}
 
                 {/* Chat button */}
@@ -258,7 +258,10 @@ const SellerOrdersPage: React.FC = () => {
                     onClick={() => navigate(`/chat/${order.id}`)}
                     style={chatBtnStyle}
                   >
-                    💬 Chat with Buyer
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                    </svg>
+                    Chat with Buyer
                   </button>
                 </div>
               </div>
@@ -270,6 +273,7 @@ const SellerOrdersPage: React.FC = () => {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         #verify-otp-btn:hover:not(:disabled) { background-color: #065f46 !important; }
+        button[id^="chat-order-"]:hover { background-color: #374151 !important; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
       `}</style>
     </AppLayout>
@@ -304,6 +308,6 @@ const verifyBtnStyle = (disabled: boolean): React.CSSProperties => ({
 const otpErrStyle: React.CSSProperties = { fontSize: '12px', color: '#991b1b', margin: '8px 0 0 0' };
 const successNoteStyle: React.CSSProperties = { marginTop: '12px', padding: '10px 12px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', fontSize: '13px', color: '#065f46' };
 const completedNoteStyle: React.CSSProperties = { marginTop: '12px', padding: '10px 12px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', fontSize: '13px', color: '#065f46' };
-const chatBtnStyle: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', borderRadius: '8px', backgroundColor: '#4f46e5', color: '#ffffff', border: 'none', fontSize: '13px', fontWeight: '600', cursor: 'pointer', transition: 'background-color 0.15s ease' };
+const chatBtnStyle: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '8px', backgroundColor: '#111827', color: '#ffffff', border: 'none', fontSize: '13px', fontWeight: '600', cursor: 'pointer', transition: 'background-color 0.15s ease' };
 
 export default SellerOrdersPage;

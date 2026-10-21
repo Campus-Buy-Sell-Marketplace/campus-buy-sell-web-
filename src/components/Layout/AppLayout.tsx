@@ -1,5 +1,5 @@
 // ============================================================
-// LAVSA — App Layout (Authenticated Shell) — Top Navbar
+// LAVSA — App Layout (Authenticated Shell) — Clean Professional
 // ============================================================
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -27,7 +27,6 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     navigate('/login', { replace: true });
   };
 
-  // Close dropdown on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -48,7 +47,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           {/* Logo */}
           <NavLink to="/home" style={logoStyle}>
             <span style={logoTextStyle}>{APP_NAME}</span>
-            <span style={logoDotStyle}>●</span>
+            <span style={logoDotStyle}>.</span>
           </NavLink>
 
           {/* Desktop Nav Links */}
@@ -60,7 +59,6 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 style={({ isActive }) => navLinkStyle(isActive)}
                 onClick={() => setMenuOpen(false)}
               >
-                <span style={{ fontSize: '15px' }}>{link.icon}</span>
                 {link.label}
                 {link.to === '/cart' && totalCount > 0 && (
                   <span style={cartBadgeStyle}>{totalCount > 99 ? '99+' : totalCount}</span>
@@ -73,7 +71,10 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           <div style={rightStyle}>
             {/* Cart shortcut (desktop) */}
             <NavLink to="/cart" style={({ isActive }) => cartIconLinkStyle(isActive)} id="nav-cart-icon">
-              <span style={{ fontSize: '20px' }}>🛒</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+              </svg>
               {totalCount > 0 && (
                 <span style={cartBubbleStyle}>{totalCount > 99 ? '99+' : totalCount}</span>
               )}
@@ -89,7 +90,9 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               >
                 <span style={avatarCircleStyle}>{user?.name?.charAt(0).toUpperCase() ?? 'U'}</span>
                 <span style={userNameStyle}>{user?.name?.split(' ')[0]}</span>
-                <span style={{ fontSize: '10px', color: '#9ca3af', marginLeft: '2px' }}>▾</span>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
               </button>
 
               {dropdownOpen && (
@@ -103,14 +106,17 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                   </div>
                   <div style={dropdownDividerStyle} />
                   <NavLink to="/profile" style={dropdownItemStyle} onClick={() => setDropdownOpen(false)} id="dd-profile">
-                    👤 Profile
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    Profile
                   </NavLink>
                   <NavLink to="/settings" style={dropdownItemStyle} onClick={() => setDropdownOpen(false)} id="dd-settings">
-                    ⚙️ Settings
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+                    Settings
                   </NavLink>
                   <div style={dropdownDividerStyle} />
                   <button style={dropdownLogoutStyle} onClick={handleLogout} id="dd-logout">
-                    ⏻ Logout
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    Log out
                   </button>
                 </div>
               )}
@@ -138,21 +144,17 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 style={({ isActive }) => mobileLinkStyle(isActive)}
                 onClick={() => setMenuOpen(false)}
               >
-                <span>{link.icon}</span>
                 {link.label}
-                {link.to === '/cart' && totalCount > 0 && (
-                  <span style={cartBadgeStyle}>{totalCount > 99 ? '99+' : totalCount}</span>
-                )}
               </NavLink>
             ))}
             <NavLink to="/profile" style={({ isActive }) => mobileLinkStyle(isActive)} onClick={() => setMenuOpen(false)}>
-              👤 Profile
+              Profile
             </NavLink>
             <NavLink to="/settings" style={({ isActive }) => mobileLinkStyle(isActive)} onClick={() => setMenuOpen(false)}>
-              ⚙️ Settings
+              Settings
             </NavLink>
             <button style={mobileLogoutStyle} onClick={handleLogout} id="mobile-logout-btn">
-              ⏻ Logout
+              Log out
             </button>
           </nav>
         )}
@@ -167,10 +169,11 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
         #user-avatar-btn:hover { background-color: #f3f4f6 !important; }
-        #nav-cart-icon:hover { opacity: 0.8; }
-        #dd-profile:hover, #dd-settings:hover { background-color: #f3f4f6 !important; color: #111827 !important; }
-        #dd-logout:hover { background-color: #fee2e2 !important; color: #dc2626 !important; }
-        #mobile-logout-btn:hover { background-color: #fee2e2 !important; color: #dc2626 !important; }
+        #nav-cart-icon { color: #6b7280; }
+        #nav-cart-icon:hover { color: #111827; background-color: #f3f4f6 !important; }
+        #dd-profile:hover, #dd-settings:hover { background-color: #f9fafb !important; color: #111827 !important; }
+        #dd-logout:hover { background-color: #fef2f2 !important; color: #dc2626 !important; }
+        #mobile-logout-btn:hover { background-color: #fef2f2 !important; color: #dc2626 !important; }
         @media (max-width: 768px) {
           #desktop-nav { display: none !important; }
           #hamburger-btn { display: flex !important; }
@@ -186,27 +189,27 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 };
 
 // ── Nav link builder ──────────────────────────────────────────────────────
-type NavItem = { to: string; label: string; icon: string };
+type NavItem = { to: string; label: string; icon?: string };
 
 function buildNavLinks(role: string | null, isSeller: boolean): NavItem[] {
   const buyer: NavItem[] = [
-    { to: '/home',     label: 'Home',      icon: '🏠' },
-    { to: '/wishlist', label: 'Wishlist',  icon: '❤️' },
-    { to: '/orders',   label: 'My Orders', icon: '📦' },
+    { to: '/home',     label: 'Home' },
+    { to: '/wishlist', label: 'Wishlist' },
+    { to: '/orders',   label: 'My Orders' },
   ];
   const seller: NavItem[] = [
-    { to: '/seller/dashboard', label: 'Seller Dashboard', icon: '📊' },
-    { to: '/seller/products',  label: 'My Listings',      icon: '🏷️' },
-    { to: '/seller/orders',    label: 'Seller Orders',     icon: '📬' },
+    { to: '/seller/dashboard', label: 'Dashboard' },
+    { to: '/seller/products',  label: 'My Listings' },
+    { to: '/seller/orders',    label: 'Orders' },
   ];
   const admin: NavItem[] = [
-    { to: '/admin/dashboard', label: 'Dashboard', icon: '🛡️' },
-    { to: '/admin/users',     label: 'Users',     icon: '👥' },
-    { to: '/admin/listings',  label: 'Listings',  icon: '📋' },
+    { to: '/admin/dashboard', label: 'Dashboard' },
+    { to: '/admin/users',     label: 'Users' },
+    { to: '/admin/listings',  label: 'Listings' },
   ];
   const superAdmin: NavItem[] = [
-    { to: '/super-admin/dashboard', label: 'SA Dashboard', icon: '⚡' },
-    { to: '/super-admin/admins',    label: 'Admins',       icon: '🔑' },
+    { to: '/super-admin/dashboard', label: 'SA Dashboard' },
+    { to: '/super-admin/admins',    label: 'Admins' },
   ];
 
   if (role === 'SUPER_ADMIN') return [...superAdmin, ...admin, ...buyer];
@@ -238,14 +241,13 @@ const navbarStyle: React.CSSProperties = {
   zIndex: 100,
   backgroundColor: '#ffffff',
   borderBottom: '1px solid #e5e7eb',
-  boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
 };
 
 const innerStyle: React.CSSProperties = {
   maxWidth: '1400px',
   margin: '0 auto',
   padding: '0 24px',
-  height: '64px',
+  height: '60px',
   display: 'flex',
   alignItems: 'center',
   gap: '24px',
@@ -253,23 +255,23 @@ const innerStyle: React.CSSProperties = {
 
 const logoStyle: React.CSSProperties = {
   display: 'flex',
-  alignItems: 'center',
-  gap: '4px',
+  alignItems: 'baseline',
   textDecoration: 'none',
   flexShrink: 0,
 };
 
 const logoTextStyle: React.CSSProperties = {
-  fontSize: '20px',
-  fontWeight: '900',
-  letterSpacing: '0.08em',
+  fontSize: '18px',
+  fontWeight: '800',
+  letterSpacing: '-0.01em',
   color: '#111827',
 };
 
 const logoDotStyle: React.CSSProperties = {
-  color: '#6b7280',
-  fontSize: '7px',
-  marginTop: '4px',
+  color: '#111827',
+  fontSize: '22px',
+  fontWeight: '900',
+  lineHeight: 1,
 };
 
 const desktopNavStyle: React.CSSProperties = {
@@ -283,10 +285,10 @@ const navLinkStyle = (isActive: boolean): React.CSSProperties => ({
   display: 'flex',
   alignItems: 'center',
   gap: '6px',
-  padding: '7px 12px',
-  borderRadius: '8px',
+  padding: '6px 12px',
+  borderRadius: '7px',
   textDecoration: 'none',
-  fontSize: '13.5px',
+  fontSize: '13px',
   fontWeight: isActive ? '600' : '500',
   color: isActive ? '#111827' : '#6b7280',
   backgroundColor: isActive ? '#f3f4f6' : 'transparent',
@@ -297,7 +299,7 @@ const navLinkStyle = (isActive: boolean): React.CSSProperties => ({
 const rightStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
-  gap: '8px',
+  gap: '4px',
   marginLeft: 'auto',
   flexShrink: 0,
 };
@@ -306,24 +308,26 @@ const cartIconLinkStyle = (isActive: boolean): React.CSSProperties => ({
   position: 'relative',
   display: 'flex',
   alignItems: 'center',
-  padding: '7px',
-  borderRadius: '8px',
+  justifyContent: 'center',
+  width: '36px',
+  height: '36px',
+  borderRadius: '7px',
   textDecoration: 'none',
   backgroundColor: isActive ? '#f3f4f6' : 'transparent',
-  transition: 'opacity 0.15s ease',
+  transition: 'all 0.15s ease',
 });
 
 const cartBubbleStyle: React.CSSProperties = {
   position: 'absolute',
-  top: '2px',
-  right: '2px',
-  backgroundColor: '#ef4444',
+  top: '4px',
+  right: '4px',
+  backgroundColor: '#111827',
   color: '#ffffff',
-  fontSize: '9px',
+  fontSize: '8px',
   fontWeight: '700',
   borderRadius: '50%',
-  width: '15px',
-  height: '15px',
+  width: '13px',
+  height: '13px',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -331,10 +335,10 @@ const cartBubbleStyle: React.CSSProperties = {
 
 const cartBadgeStyle: React.CSSProperties = {
   marginLeft: '4px',
-  minWidth: '17px',
-  height: '17px',
-  borderRadius: '9px',
-  backgroundColor: '#ef4444',
+  minWidth: '16px',
+  height: '16px',
+  borderRadius: '8px',
+  backgroundColor: '#111827',
   color: '#ffffff',
   fontSize: '9px',
   fontWeight: '700',
@@ -347,9 +351,9 @@ const cartBadgeStyle: React.CSSProperties = {
 const avatarBtnStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
-  gap: '8px',
-  padding: '6px 10px',
-  borderRadius: '8px',
+  gap: '7px',
+  padding: '5px 10px',
+  borderRadius: '7px',
   border: 'none',
   backgroundColor: 'transparent',
   cursor: 'pointer',
@@ -358,15 +362,15 @@ const avatarBtnStyle: React.CSSProperties = {
 };
 
 const avatarCircleStyle: React.CSSProperties = {
-  width: '28px',
-  height: '28px',
+  width: '27px',
+  height: '27px',
   borderRadius: '50%',
   backgroundColor: '#111827',
   color: '#ffffff',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  fontSize: '12px',
+  fontSize: '11px',
   fontWeight: '700',
   flexShrink: 0,
 };
@@ -385,7 +389,7 @@ const dropdownStyle: React.CSSProperties = {
   backgroundColor: '#ffffff',
   border: '1px solid #e5e7eb',
   borderRadius: '10px',
-  boxShadow: '0 8px 24px rgba(0,0,0,0.10)',
+  boxShadow: '0 8px 30px rgba(0,0,0,0.10)',
   overflow: 'hidden',
   zIndex: 200,
 };
@@ -398,15 +402,15 @@ const dropdownHeaderStyle: React.CSSProperties = {
 };
 
 const dropdownAvatarStyle: React.CSSProperties = {
-  width: '34px',
-  height: '34px',
+  width: '32px',
+  height: '32px',
   borderRadius: '50%',
   backgroundColor: '#111827',
   color: '#ffffff',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  fontSize: '13px',
+  fontSize: '12px',
   fontWeight: '700',
   flexShrink: 0,
 };
@@ -434,8 +438,8 @@ const dropdownDividerStyle: React.CSSProperties = {
 const dropdownItemStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
-  gap: '8px',
-  padding: '10px 16px',
+  gap: '9px',
+  padding: '9px 16px',
   fontSize: '13px',
   color: '#374151',
   textDecoration: 'none',
@@ -446,8 +450,8 @@ const dropdownLogoutStyle: React.CSSProperties = {
   width: '100%',
   display: 'flex',
   alignItems: 'center',
-  gap: '8px',
-  padding: '10px 16px',
+  gap: '9px',
+  padding: '9px 16px',
   fontSize: '13px',
   color: '#374151',
   background: 'none',
@@ -461,13 +465,14 @@ const hamburgerStyle: React.CSSProperties = {
   display: 'none',
   alignItems: 'center',
   justifyContent: 'center',
-  width: '36px',
-  height: '36px',
-  borderRadius: '8px',
+  width: '34px',
+  height: '34px',
+  borderRadius: '7px',
   border: '1px solid #e5e7eb',
   backgroundColor: 'transparent',
   cursor: 'pointer',
-  fontSize: '16px',
+  fontSize: '15px',
+  color: '#374151',
   fontFamily: "'Inter', system-ui, sans-serif",
 };
 
@@ -484,8 +489,8 @@ const mobileLinkStyle = (isActive: boolean): React.CSSProperties => ({
   display: 'flex',
   alignItems: 'center',
   gap: '10px',
-  padding: '10px 12px',
-  borderRadius: '8px',
+  padding: '9px 12px',
+  borderRadius: '7px',
   textDecoration: 'none',
   fontSize: '14px',
   fontWeight: isActive ? '600' : '400',
@@ -495,8 +500,8 @@ const mobileLinkStyle = (isActive: boolean): React.CSSProperties => ({
 
 const mobileLogoutStyle: React.CSSProperties = {
   marginTop: '8px',
-  padding: '10px 12px',
-  borderRadius: '8px',
+  padding: '9px 12px',
+  borderRadius: '7px',
   border: '1px solid #e5e7eb',
   backgroundColor: 'transparent',
   color: '#6b7280',

@@ -9,6 +9,7 @@ import AppLayout from '../../components/Layout/AppLayout';
 import { getProducts, Product } from '../../services/productService';
 import { useCart } from '../../context/CartContext';
 import { useToast } from '../../context/ToastContext';
+import CartButton from '../../components/CartButton/CartButton';
 import { getWishlistIds, addToWishlist, removeFromWishlist } from '../../services/userService';
 
 const CATEGORIES = ['All', 'Electronics', 'Books', 'Clothing', 'Furniture', 'Sports', 'Other'];
@@ -130,16 +131,15 @@ const ProductsPage: React.FC = () => {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
         * { box-sizing: border-box; }
-        .prod-card { transition: transform 0.22s cubic-bezier(.4,0,.2,1), box-shadow 0.22s ease !important; }
-        .prod-card:hover { transform: translateY(-4px) !important; box-shadow: 0 20px 48px rgba(0,0,0,0.10) !important; }
-        .btn-cart-p:hover:not(:disabled) { background: #1d4ed8 !important; }
-        .btn-buy-p:hover:not(:disabled) { background: #1e293b !important; }
+        .prod-card { transition: transform 0.18s ease, box-shadow 0.18s ease !important; }
+        .prod-card:hover { transform: translateY(-2px) !important; box-shadow: 0 8px 24px rgba(0,0,0,0.09) !important; }
+        .btn-add-p:hover:not(:disabled) { background: #374151 !important; }
         .wish-btn-p:hover { transform: scale(1.18); }
-        .search-prod-input:focus { outline: none; border-color: #6366f1 !important; box-shadow: 0 0 0 3px rgba(99,102,241,0.12) !important; }
+        .search-prod-input:focus { outline: none; border-color: #111827 !important; box-shadow: 0 0 0 2px rgba(17,24,39,0.08) !important; }
         .cat-pill-p { transition: all 0.15s ease !important; }
-        .cat-pill-p:hover { background: #f1f5f9 !important; border-color: #94a3b8 !important; }
+        .cat-pill-p:hover { background: #f3f4f6 !important; border-color: #9ca3af !important; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         .fade-in-p { animation: fadeIn 0.3s ease forwards; }
         @media (max-width: 640px) {
           .products-header-row { flex-direction: column !important; align-items: stretch !important; }
@@ -242,7 +242,7 @@ const ProductsPage: React.FC = () => {
                   id={`product-${product.id}`}
                 >
                   {/* Image area — clicking goes to detail */}
-                  <Link to={`/products/${product.id}`} style={{ textDecoration: 'none', display: 'block' }}>
+                  <Link to={`/products/${product.id}`} style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', flex: 1 }}>
                     <div style={cardImgWrapStyle}>
                       {product.image_url ? (
                         <img
@@ -281,53 +281,21 @@ const ProductsPage: React.FC = () => {
                     <div style={cardBodyStyle}>
                       <span style={catLabelStyle}>{product.category || 'General'}</span>
                       <h3 style={cardTitleStyle}>{product.title}</h3>
-                      {product.description && (
-                        <p style={cardDescStyle}>
-                          {product.description.length > 72
-                            ? product.description.slice(0, 72) + '…'
-                            : product.description}
-                        </p>
-                      )}
                       <div style={sellerStyle}>by {product.seller_name}</div>
                     </div>
                   </Link>
 
-                  {/* Price + Action row */}
+                  {/* Price + ADD / Stepper */}
                   <div style={cardFootStyle}>
                     <div style={priceStyle}>
                       ₹{Number(product.price).toLocaleString('en-IN', { minimumFractionDigits: 0 })}
                     </div>
-                    <div style={{ display: 'flex', gap: '7px', alignItems: 'center' }}>
-                      {/* Cart icon button */}
-                      <button
-                        onClick={(e) => handleAddToCart(e, product.id)}
-                        style={{
-                          ...addCartBtnStyle,
-                          background: isAdded ? '#059669' : '#2563eb',
-                          opacity: busy ? 0.65 : 1,
-                        }}
-                        disabled={busy}
-                        className="btn-cart-p"
-                        id={`add-cart-${product.id}`}
-                        title="Add to cart"
-                      >
-                        {isAdding ? '…' : isAdded ? '✓' : '🛒'}
-                      </button>
-
-                      {/* Buy Now */}
-                      <button
-                        onClick={(e) => handleBuyNow(e, product.id)}
-                        style={{
-                          ...buyNowBtnStyle,
-                          opacity: busy ? 0.65 : 1,
-                        }}
-                        disabled={busy}
-                        className="btn-buy-p"
-                        id={`buy-now-${product.id}`}
-                      >
-                        {isBuying ? 'Going…' : 'Buy Now'}
-                      </button>
-                    </div>
+                    <CartButton
+                      productId={product.id}
+                      stock={product.stock}
+                      productTitle={product.title}
+                      id={`add-${product.id}`}
+                    />
                   </div>
                 </div>
               );
@@ -388,9 +356,9 @@ const searchInputStyle: React.CSSProperties = {
 const searchBtnStyle: React.CSSProperties = {
   height: '42px',
   padding: '0 18px',
-  borderRadius: '0 10px 10px 0',
-  border: '1.5px solid #6366f1',
-  backgroundColor: '#6366f1',
+  borderRadius: '0 7px 7px 0',
+  border: '1px solid #111827',
+  backgroundColor: '#111827',
   color: '#ffffff',
   cursor: 'pointer',
   fontSize: '13px',
@@ -407,17 +375,16 @@ const catRowStyle: React.CSSProperties = {
 };
 
 const catPillStyle = (active: boolean): React.CSSProperties => ({
-  padding: '6px 16px',
+  padding: '5px 16px',
   borderRadius: '20px',
-  border: `1.5px solid ${active ? '#6366f1' : '#e2e8f0'}`,
-  backgroundColor: active ? '#6366f1' : '#ffffff',
-  color: active ? '#ffffff' : '#64748b',
-  fontSize: '13px',
+  border: `1px solid ${active ? '#111827' : '#e5e7eb'}`,
+  backgroundColor: active ? '#111827' : '#ffffff',
+  color: active ? '#ffffff' : '#374151',
+  fontSize: '12px',
   fontWeight: active ? '600' : '500',
   cursor: 'pointer',
   fontFamily: "'Inter', system-ui, sans-serif",
   whiteSpace: 'nowrap',
-  letterSpacing: active ? '0' : '0',
 });
 
 const errorStyle: React.CSSProperties = {
@@ -431,10 +398,10 @@ const errorStyle: React.CSSProperties = {
 };
 
 const spinnerStyle: React.CSSProperties = {
-  width: '36px',
-  height: '36px',
-  border: '3px solid #e2e8f0',
-  borderTop: '3px solid #6366f1',
+  width: '32px',
+  height: '32px',
+  border: '2.5px solid #e5e7eb',
+  borderTop: '2.5px solid #111827',
   borderRadius: '50%',
   margin: '0 auto',
   animation: 'spin 0.8s linear infinite',
@@ -448,13 +415,14 @@ const gridStyle: React.CSSProperties = {
 
 const cardStyle: React.CSSProperties = {
   backgroundColor: '#ffffff',
-  borderRadius: '16px',
-  border: '1px solid #f1f5f9',
+  borderRadius: '10px',
+  border: '1px solid #e5e7eb',
   overflow: 'hidden',
   display: 'flex',
   flexDirection: 'column',
-  boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+  height: '100%',
   cursor: 'pointer',
+  boxSizing: 'border-box',
 };
 
 const cardImgWrapStyle: React.CSSProperties = {
@@ -478,7 +446,7 @@ const noImgStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+  background: '#f3f4f6',
 };
 
 const condBadgeStyle: React.CSSProperties = {
@@ -514,6 +482,8 @@ const heartBtnStyle: React.CSSProperties = {
 
 const cardBodyStyle: React.CSSProperties = {
   padding: '14px 16px 10px',
+  display: 'flex',
+  flexDirection: 'column',
   flex: 1,
 };
 
@@ -532,34 +502,32 @@ const cardTitleStyle: React.CSSProperties = {
   fontWeight: '700',
   color: '#0f172a',
   margin: '0 0 5px 0',
-  lineHeight: '1.4',
+  lineHeight: '1.35',
+  height: '38px',
   display: '-webkit-box',
   WebkitLineClamp: 2,
   WebkitBoxOrient: 'vertical',
   overflow: 'hidden',
 };
 
-const cardDescStyle: React.CSSProperties = {
-  fontSize: '12px',
-  color: '#64748b',
-  margin: '0 0 6px 0',
-  lineHeight: '1.55',
-};
-
 const sellerStyle: React.CSSProperties = {
   fontSize: '11px',
   color: '#94a3b8',
   fontWeight: '500',
+  margin: '0',
+  marginTop: 'auto',
 };
 
 const cardFootStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
-  padding: '12px 16px',
-  borderTop: '1px solid #f1f5f9',
-  backgroundColor: '#fafbfc',
+  padding: '10px 16px 12px',
+  borderTop: '1px solid #f3f4f6',
   gap: '8px',
+  marginTop: 'auto',
+  minHeight: '56px',
+  boxSizing: 'border-box',
 };
 
 const priceStyle: React.CSSProperties = {
@@ -567,38 +535,23 @@ const priceStyle: React.CSSProperties = {
   fontWeight: '800',
   color: '#0f172a',
   letterSpacing: '-0.01em',
-};
-
-const addCartBtnStyle: React.CSSProperties = {
-  width: '36px',
-  height: '36px',
-  borderRadius: '10px',
-  border: 'none',
-  color: '#ffffff',
-  fontSize: '15px',
-  cursor: 'pointer',
   display: 'flex',
   alignItems: 'center',
-  justifyContent: 'center',
-  transition: 'background 0.15s',
-  flexShrink: 0,
-  fontFamily: "'Inter', system-ui, sans-serif",
 };
 
-const buyNowBtnStyle: React.CSSProperties = {
-  height: '36px',
-  padding: '0 14px',
-  borderRadius: '10px',
+const addBtnStyle: React.CSSProperties = {
+  height: '34px',
+  padding: '0 18px',
+  borderRadius: '7px',
   border: 'none',
-  backgroundColor: '#0f172a',
   color: '#ffffff',
   fontSize: '12px',
   fontWeight: '700',
+  letterSpacing: '0.05em',
   cursor: 'pointer',
   transition: 'background 0.15s',
   fontFamily: "'Inter', system-ui, sans-serif",
   whiteSpace: 'nowrap',
-  letterSpacing: '0.01em',
 };
 
 export default ProductsPage;

@@ -26,10 +26,48 @@ const SellerDashboardPage: React.FC = () => {
   const lowStock = products.filter((p) => Number(p.stock) < 3).length;
 
   const stats = [
-    { label: 'Total Listings',   value: isLoading ? '—' : String(totalProducts),  icon: '🏷️' },
-    { label: 'Active Listings',  value: isLoading ? '—' : String(activeListings), icon: '✅' },
-    { label: 'Low Stock Items',  value: isLoading ? '—' : String(lowStock),       icon: '⚠️' },
-    { label: 'Pending Orders',   value: '—',                                       icon: '📬' },
+    {
+      label: 'Total Listings',
+      value: isLoading ? '—' : String(totalProducts),
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#111827" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+          <line x1="7" y1="7" x2="7.01" y2="7"/>
+        </svg>
+      ),
+    },
+    {
+      label: 'Active Listings',
+      value: isLoading ? '—' : String(activeListings),
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+          <polyline points="22 4 12 14.01 9 11.01"/>
+        </svg>
+      ),
+    },
+    {
+      label: 'Low Stock Items',
+      value: isLoading ? '—' : String(lowStock),
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+      ),
+    },
+    {
+      label: 'Pending Orders',
+      value: '—',
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4b5563" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+          <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+          <line x1="12" y1="22.08" x2="12" y2="12"/>
+        </svg>
+      ),
+    },
   ];
 
   return (
@@ -50,7 +88,7 @@ const SellerDashboardPage: React.FC = () => {
         <div style={gridStyle}>
           {stats.map((s, i) => (
             <div key={i} style={statCardStyle}>
-              <div style={iconStyle}>{s.icon}</div>
+              <div style={{ ...iconStyle, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{s.icon}</div>
               <div>
                 <div style={{ color: '#6b7280', fontSize: '12px', fontWeight: '500' }}>{s.label}</div>
                 <div style={{ color: '#111827', fontSize: '22px', fontWeight: '700', marginTop: '2px' }}>{s.value}</div>
@@ -64,17 +102,33 @@ const SellerDashboardPage: React.FC = () => {
           <h2 style={cardHeadingStyle}>Quick Actions</h2>
           <div style={quickLinksGridStyle}>
             <Link to="/seller/products" style={{ ...quickLinkCardStyle, borderColor: '#111827' }} id="ql-add-product">
-              <span style={{ fontSize: '28px' }}>➕</span>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '4px' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#111827" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19"/>
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+              </div>
               <div style={{ fontWeight: '700', color: '#111827', marginTop: '8px' }}>Add Product</div>
               <div style={{ color: '#9ca3af', fontSize: '12px', marginTop: '4px' }}>List a new item for sale</div>
             </Link>
             <Link to="/seller/products" style={quickLinkCardStyle} id="ql-my-listings">
-              <span style={{ fontSize: '28px' }}>🏷️</span>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '4px' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#111827" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+                  <line x1="7" y1="7" x2="7.01" y2="7"/>
+                </svg>
+              </div>
               <div style={{ fontWeight: '600', color: '#111827', marginTop: '8px' }}>My Listings</div>
               <div style={{ color: '#9ca3af', fontSize: '12px', marginTop: '4px' }}>Add or manage products</div>
             </Link>
             <Link to="/seller/orders" style={quickLinkCardStyle} id="ql-orders">
-              <span style={{ fontSize: '28px' }}>📬</span>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '4px' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#111827" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+                  <line x1="3" y1="6" x2="21" y2="6"/>
+                  <path d="M16 10a4 4 0 0 1-8 0"/>
+                </svg>
+              </div>
               <div style={{ fontWeight: '600', color: '#111827', marginTop: '8px' }}>Orders</div>
               <div style={{ color: '#9ca3af', fontSize: '12px', marginTop: '4px' }}>View incoming orders</div>
             </Link>

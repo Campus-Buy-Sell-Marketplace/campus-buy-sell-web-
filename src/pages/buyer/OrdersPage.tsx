@@ -33,13 +33,13 @@ interface Order {
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {
-  PENDING_MEETUP:      { label: '⏳ Awaiting Meetup',         color: '#92400e', bg: '#fffbeb' },
-  PAID_PENDING_MEETUP: { label: '✅ Paid · Awaiting Meetup', color: '#1e40af', bg: '#eff6ff' },
-  PENDING_PAYMENT:     { label: '💳 Payment Pending',         color: '#b45309', bg: '#fef3c7' },
-  COMPLETED:           { label: '✅ Completed',               color: '#065f46', bg: '#f0fdf4' },
-  CANCELLED:           { label: '❌ Cancelled',                color: '#991b1b', bg: '#fef2f2' },
-  CONFIRMED:           { label: '✅ Confirmed',                 color: '#065f46', bg: '#f0fdf4' },
-  PENDING:             { label: '⏳ Pending',                   color: '#92400e', bg: '#fffbeb' },
+  PENDING_MEETUP:      { label: 'Awaiting Meetup',         color: '#92400e', bg: '#fffbeb' },
+  PAID_PENDING_MEETUP: { label: 'Paid · Awaiting Meetup', color: '#1e40af', bg: '#eff6ff' },
+  PENDING_PAYMENT:     { label: 'Payment Pending',         color: '#b45309', bg: '#fef3c7' },
+  COMPLETED:           { label: 'Completed',               color: '#065f46', bg: '#f0fdf4' },
+  CANCELLED:           { label: 'Cancelled',                color: '#991b1b', bg: '#fef2f2' },
+  CONFIRMED:           { label: 'Confirmed',                 color: '#065f46', bg: '#f0fdf4' },
+  PENDING:             { label: 'Pending',                   color: '#92400e', bg: '#fffbeb' },
 };
 
 const OrdersPage: React.FC = () => {
@@ -152,19 +152,25 @@ const OrdersPage: React.FC = () => {
 
         {error && (
           <div style={errorStyle}>
-            <span>⚠️ {error}</span>
+            <span>{error}</span>
             <button onClick={() => setError('')} style={dismissBtnStyle} aria-label="Dismiss">✕</button>
           </div>
         )}
 
         {!isLoading && !error && orders.length === 0 && (
           <div style={emptyCardStyle}>
-            <div style={{ fontSize: '48px', marginBottom: '12px' }}>📦</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '14px' }}>
+              <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                <line x1="12" y1="22.08" x2="12" y2="12"/>
+              </svg>
+            </div>
             <h2 style={{ color: '#374151', margin: '0 0 8px 0', fontSize: '18px' }}>No orders yet</h2>
             <p style={{ color: '#9ca3af', fontSize: '14px', marginBottom: '20px' }}>
               Add items to your cart and place an order!
             </p>
-            <Link to="/products" style={shopBtnStyle} id="browse-products-btn">
+            <Link to="/home" style={shopBtnStyle} id="browse-products-btn">
               Browse Products
             </Link>
           </div>
@@ -195,7 +201,7 @@ const OrdersPage: React.FC = () => {
                       {statusInfo.label}
                     </span>
                     <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
-                      {order.payment_method === 'OFFLINE' ? '💵 Cash at Meetup' : '💳 Online'}
+                      {order.payment_method === 'OFFLINE' ? 'Cash at Meetup' : 'Online'}
                     </div>
                   </div>
                 </div>
@@ -233,17 +239,17 @@ const OrdersPage: React.FC = () => {
                 {order.meetup_location && (
                   <div style={{ backgroundColor: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px 14px', marginTop: '12px', fontSize: '13px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#1f2937', fontWeight: '600', marginBottom: '4px' }}>
-                      <span>📍 Meetup Spot:</span>
+                      <span>Meetup Spot:</span>
                       <span style={{ color: '#111827', fontWeight: '700' }}>{order.meetup_location}</span>
                     </div>
                     {order.meetup_time && (
                       <div style={{ color: '#4b5563', fontSize: '12px', marginBottom: order.meetup_notes ? '4px' : '0' }}>
-                        ⏰ <strong>Scheduled:</strong> {order.meetup_time}
+                        <strong>Scheduled:</strong> {order.meetup_time}
                       </div>
                     )}
                     {order.meetup_notes && (
                       <div style={{ color: '#6b7280', fontSize: '12px', fontStyle: 'italic', marginTop: '2px' }}>
-                        📝 Note: "{order.meetup_notes}"
+                        Note: "{order.meetup_notes}"
                       </div>
                     )}
                   </div>
@@ -254,7 +260,7 @@ const OrdersPage: React.FC = () => {
                   <div style={otpSectionStyle}>
                     <div style={otpHeaderRow}>
                       <span style={{ fontSize: '13px', fontWeight: '600', color: '#92400e' }}>
-                        🔑 Delivery OTP
+                        Delivery OTP
                       </span>
                       <button
                         id={`reveal-otp-${order.id}`}
@@ -289,7 +295,7 @@ const OrdersPage: React.FC = () => {
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
                       <div>
                         <div style={{ fontWeight: '700', color: '#92400e', fontSize: '13px' }}>
-                          ⚠️ Payment Incomplete (15-min reservation window)
+                          Payment Incomplete (15-min reservation window)
                         </div>
                         <div style={{ color: '#b45309', fontSize: '12px', marginTop: '2px' }}>
                           Complete online payment to secure your items and generate your Delivery OTP.
@@ -299,7 +305,7 @@ const OrdersPage: React.FC = () => {
                         onClick={() => handlePayNow(order)}
                         disabled={payingOrderId === order.id}
                         style={{
-                          backgroundColor: '#2563eb',
+                          backgroundColor: '#111827',
                           color: '#ffffff',
                           border: 'none',
                           borderRadius: '6px',
@@ -309,14 +315,14 @@ const OrdersPage: React.FC = () => {
                           cursor: 'pointer',
                         }}
                       >
-                        {payingOrderId === order.id ? 'Opening...' : '💳 Pay Now via Razorpay'}
+                        {payingOrderId === order.id ? 'Opening...' : 'Pay Now via Razorpay'}
                       </button>
                     </div>
                   </div>
                 )}
 
                 {order.status === 'COMPLETED' && (
-                  <div style={completedNoteStyle}>✅ Delivery confirmed. OTP was verified by the seller.</div>
+                  <div style={completedNoteStyle}>Delivery confirmed. OTP was verified by the seller.</div>
                 )}
 
                 {/* Chat button — available for active/completed orders */}
@@ -326,7 +332,10 @@ const OrdersPage: React.FC = () => {
                     onClick={() => navigate(`/chat/${order.id}`)}
                     style={chatBtnStyle}
                   >
-                    💬 Chat with Seller
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                    </svg>
+                    Chat with Seller
                   </button>
                 </div>
               </div>
@@ -338,6 +347,7 @@ const OrdersPage: React.FC = () => {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         #browse-products-btn:hover { background-color: #374151 !important; }
+        button[id^="chat-order-"]:hover { background-color: #374151 !important; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
       `}</style>
     </AppLayout>
@@ -368,6 +378,6 @@ const otpDigitsRow: React.CSSProperties = { display: 'flex', gap: '6px', marginB
 const otpDigitStyle: React.CSSProperties = { width: '38px', height: '48px', borderRadius: '8px', backgroundColor: '#111827', color: '#ffffff', fontSize: '20px', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center' };
 const otpNoteStyle: React.CSSProperties = { fontSize: '11px', color: '#92400e', margin: 0 };
 const completedNoteStyle: React.CSSProperties = { marginTop: '12px', padding: '10px 12px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', fontSize: '13px', color: '#065f46' };
-const chatBtnStyle: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', borderRadius: '8px', backgroundColor: '#4f46e5', color: '#ffffff', border: 'none', fontSize: '13px', fontWeight: '600', cursor: 'pointer', transition: 'background-color 0.15s ease' };
+const chatBtnStyle: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '8px', backgroundColor: '#111827', color: '#ffffff', border: 'none', fontSize: '13px', fontWeight: '600', cursor: 'pointer', transition: 'background-color 0.15s ease' };
 
 export default OrdersPage;

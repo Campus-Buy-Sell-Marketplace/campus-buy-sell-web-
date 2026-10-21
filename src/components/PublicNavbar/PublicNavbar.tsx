@@ -1,5 +1,5 @@
 // ============================================================
-// UniTrade — Public Top Navbar — White Theme
+// UniTrade — Public Navbar — Minimal (Amazon/Flipkart style)
 // ============================================================
 
 import React, { useState } from 'react';
@@ -16,218 +16,219 @@ const PublicNavbar: React.FC = () => {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/products?q=${encodeURIComponent(searchQuery.trim())}`);
-    }
+    navigate(`/?q=${encodeURIComponent(searchQuery.trim())}`);
   };
 
   return (
     <header style={navbarStyle}>
       <div style={innerStyle}>
-        {/* ── Logo ── */}
+        {/* Logo */}
         <Link to="/" style={logoStyle}>
           <span style={logoTextStyle}>{APP_NAME}</span>
-          <span style={logoDotStyle}>●</span>
+          <span style={logoDotStyle}>.</span>
         </Link>
 
-        {/* ── Search bar ── */}
+        {/* Search — center, full width */}
         <form onSubmit={handleSearch} style={searchFormStyle}>
-          <input
-            type="text"
-            placeholder="Search products on campus..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={searchInputStyle}
-            id="public-search-input"
-          />
-          <button type="submit" style={searchBtnStyle} id="public-search-btn">
-            🔍
-          </button>
+          <div style={searchWrapStyle}>
+            <svg style={{ flexShrink: 0, color: '#9ca3af' }} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input
+              type="text"
+              placeholder="Search products..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={searchInputStyle}
+              id="public-search-input"
+            />
+          </div>
         </form>
 
-        {/* ── Right actions ── */}
+        {/* Right: auth actions */}
         <div style={actionsStyle}>
-          <Link to={isAuthenticated ? '/cart' : '/login'} style={cartBtnStyle} id="navbar-cart-btn">
-            <span style={{ fontSize: '18px' }}>🛒</span>
-            {totalCount > 0 && (
-              <span style={cartBadgeStyle}>{totalCount > 99 ? '99+' : totalCount}</span>
-            )}
-            <span style={cartLabelStyle}>Cart</span>
-          </Link>
-
           {isAuthenticated ? (
-            <Link to="/home" style={signInBtnStyle} id="navbar-dashboard-btn">
-              <span style={avatarStyle}>{user?.name?.charAt(0).toUpperCase()}</span>
-              <span>Dashboard</span>
-            </Link>
+            <>
+              <Link to="/cart" style={cartLinkStyle} id="navbar-cart-btn">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+                  <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+                </svg>
+                {totalCount > 0 && <span style={cartBadgeStyle}>{totalCount}</span>}
+              </Link>
+              <Link to="/home" style={dashboardBtnStyle} id="navbar-dashboard-btn">
+                <span style={avatarStyle}>{user?.name?.charAt(0).toUpperCase()}</span>
+                <span>My Account</span>
+              </Link>
+            </>
           ) : (
-            <Link to="/login" style={signInBtnStyle} id="navbar-signin-btn">
-              Sign In
-            </Link>
+            <>
+              <Link to="/login" style={loginLinkStyle} id="navbar-login-btn">Login</Link>
+              <Link to="/login" style={signupBtnStyle} id="navbar-signup-btn">Sign Up</Link>
+            </>
           )}
         </div>
       </div>
 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-        #public-search-input::placeholder { color: #94a3b8; }
-        #public-search-input:focus { outline: none; border-color: #6366f1 !important; box-shadow: 0 0 0 3px rgba(99,102,241,0.12); }
-        #navbar-signin-btn:hover { background-color: #0f172a !important; color: #fff !important; }
-        #navbar-cart-btn:hover { background-color: #f8fafc !important; }
-        #navbar-dashboard-btn:hover { background-color: #0f172a !important; color: #fff !important; }
-        #public-search-btn:hover { background-color: #4f46e5 !important; }
-        @media (max-width: 640px) {
-          #public-search-form { display: none !important; }
-        }
+        #public-search-input::placeholder { color: #9ca3af; }
+        #public-search-input:focus { outline: none; }
+        #navbar-login-btn:hover { color: #111827 !important; }
+        #navbar-signup-btn:hover { background: #374151 !important; }
+        #navbar-dashboard-btn:hover { background: #f3f4f6 !important; }
+        #navbar-cart-btn:hover { background: #f3f4f6 !important; }
       `}</style>
     </header>
   );
 };
-
-// ── Styles ────────────────────────────────────────────────────────────────────
 
 const navbarStyle: React.CSSProperties = {
   position: 'sticky',
   top: 0,
   zIndex: 100,
   backgroundColor: '#ffffff',
-  borderBottom: '1px solid #e8edf3',
-  boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+  borderBottom: '1px solid #e5e7eb',
   fontFamily: "'Inter', system-ui, sans-serif",
 };
 
 const innerStyle: React.CSSProperties = {
   maxWidth: '1400px',
   margin: '0 auto',
-  padding: '0 24px',
-  height: '64px',
+  padding: '0 20px',
+  height: '58px',
   display: 'flex',
   alignItems: 'center',
-  gap: '20px',
+  gap: '16px',
 };
 
 const logoStyle: React.CSSProperties = {
   display: 'flex',
-  alignItems: 'center',
-  gap: '4px',
+  alignItems: 'baseline',
   textDecoration: 'none',
   flexShrink: 0,
 };
 
 const logoTextStyle: React.CSSProperties = {
-  fontSize: '20px',
-  fontWeight: '900',
-  letterSpacing: '0.04em',
-  color: '#0f172a',
+  fontSize: '19px',
+  fontWeight: '800',
+  letterSpacing: '-0.01em',
+  color: '#111827',
 };
 
 const logoDotStyle: React.CSSProperties = {
-  color: '#6366f1',
-  fontSize: '8px',
-  marginTop: '4px',
+  fontSize: '22px',
+  fontWeight: '900',
+  color: '#111827',
 };
 
 const searchFormStyle: React.CSSProperties = {
   flex: 1,
+};
+
+const searchWrapStyle: React.CSSProperties = {
   display: 'flex',
-  maxWidth: '560px',
+  alignItems: 'center',
+  gap: '8px',
+  height: '38px',
+  padding: '0 14px',
+  borderRadius: '8px',
+  border: '1px solid #e5e7eb',
+  backgroundColor: '#f9fafb',
 };
 
 const searchInputStyle: React.CSSProperties = {
   flex: 1,
-  height: '40px',
-  padding: '0 14px',
-  borderRadius: '10px 0 0 10px',
-  border: '1.5px solid #e2e8f0',
-  borderRight: 'none',
-  backgroundColor: '#f8fafc',
-  color: '#0f172a',
+  border: 'none',
+  background: 'transparent',
+  color: '#111827',
   fontSize: '14px',
   fontFamily: "'Inter', system-ui, sans-serif",
-  transition: 'border-color 0.15s, box-shadow 0.15s',
-};
-
-const searchBtnStyle: React.CSSProperties = {
-  height: '40px',
-  padding: '0 16px',
-  borderRadius: '0 10px 10px 0',
-  border: '1.5px solid #6366f1',
-  backgroundColor: '#6366f1',
-  color: '#ffffff',
-  cursor: 'pointer',
-  fontSize: '15px',
-  transition: 'background-color 0.15s',
+  outline: 'none',
 };
 
 const actionsStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
-  gap: '10px',
+  gap: '8px',
   flexShrink: 0,
-  marginLeft: 'auto',
 };
 
-const cartBtnStyle: React.CSSProperties = {
+const loginLinkStyle: React.CSSProperties = {
+  padding: '6px 12px',
+  fontSize: '13px',
+  fontWeight: '500',
+  color: '#6b7280',
+  textDecoration: 'none',
+  borderRadius: '6px',
+  transition: 'color 0.15s',
+};
+
+const signupBtnStyle: React.CSSProperties = {
+  padding: '7px 16px',
+  fontSize: '13px',
+  fontWeight: '600',
+  color: '#ffffff',
+  backgroundColor: '#111827',
+  textDecoration: 'none',
+  borderRadius: '7px',
+  transition: 'background 0.15s',
+};
+
+const cartLinkStyle: React.CSSProperties = {
+  position: 'relative',
   display: 'flex',
   alignItems: 'center',
-  gap: '6px',
-  padding: '7px 12px',
-  borderRadius: '9px',
-  textDecoration: 'none',
+  justifyContent: 'center',
+  width: '36px',
+  height: '36px',
+  borderRadius: '8px',
   color: '#374151',
-  fontSize: '14px',
-  fontWeight: '500',
-  position: 'relative',
-  transition: 'background-color 0.15s',
-  border: '1.5px solid #e2e8f0',
+  textDecoration: 'none',
+  transition: 'background 0.15s',
 };
 
 const cartBadgeStyle: React.CSSProperties = {
   position: 'absolute',
-  top: '-4px',
-  right: '-4px',
-  backgroundColor: '#ef4444',
-  color: '#ffffff',
-  fontSize: '9px',
+  top: '2px',
+  right: '2px',
+  backgroundColor: '#111827',
+  color: '#fff',
+  fontSize: '8px',
   fontWeight: '700',
   borderRadius: '50%',
-  width: '16px',
-  height: '16px',
+  width: '14px',
+  height: '14px',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
 };
 
-const cartLabelStyle: React.CSSProperties = {
-  fontSize: '13px',
-  fontWeight: '600',
-};
-
-const signInBtnStyle: React.CSSProperties = {
+const dashboardBtnStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
-  gap: '8px',
-  padding: '8px 18px',
-  borderRadius: '9px',
-  backgroundColor: '#0f172a',
-  color: '#ffffff',
-  fontSize: '14px',
-  fontWeight: '600',
+  gap: '7px',
+  padding: '5px 12px 5px 6px',
+  borderRadius: '8px',
   textDecoration: 'none',
-  transition: 'background-color 0.15s',
+  color: '#374151',
+  fontSize: '13px',
+  fontWeight: '500',
+  transition: 'background 0.15s',
 };
 
 const avatarStyle: React.CSSProperties = {
-  width: '22px',
-  height: '22px',
+  width: '26px',
+  height: '26px',
   borderRadius: '50%',
-  backgroundColor: '#6366f1',
-  color: '#ffffff',
+  backgroundColor: '#111827',
+  color: '#fff',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
   fontSize: '11px',
   fontWeight: '700',
+  flexShrink: 0,
 };
 
 export default PublicNavbar;

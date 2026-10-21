@@ -8,6 +8,7 @@ import { Link } from 'react-router-dom';
 import AppLayout from '../../components/Layout/AppLayout';
 import { getWishlist, removeFromWishlist, WishlistItem } from '../../services/userService';
 import { useCart } from '../../context/CartContext';
+import CartButton from '../../components/CartButton/CartButton';
 
 const CONDITIONS: Record<string, string> = {
   NEW: '#065f46',
@@ -90,12 +91,16 @@ const WishlistPage: React.FC = () => {
 
         {!isLoading && !error && items.length === 0 && (
           <div style={emptyCardStyle}>
-            <div style={{ fontSize: '48px', marginBottom: '12px' }}>🤍</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '14px' }}>
+              <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+              </svg>
+            </div>
             <h3 style={{ color: '#111827', margin: '0 0 8px 0' }}>Your wishlist is empty</h3>
             <p style={{ color: '#6b7280', fontSize: '14px', margin: '0 0 20px 0' }}>
-              Browse products and hit ❤️ to save items for later.
+              Browse products and click the heart icon to save items for later.
             </p>
-            <Link to="/products" style={browseBtnStyle}>Browse Products →</Link>
+            <Link to="/home" style={browseBtnStyle}>Browse Products →</Link>
           </div>
         )}
 
@@ -114,7 +119,13 @@ const WishlistPage: React.FC = () => {
                   {item.image_url ? (
                     <img src={item.image_url} alt={item.title} style={cardImageStyle} loading="lazy" />
                   ) : (
-                    <div style={cardNoImageStyle}><span style={{ fontSize: '36px' }}>📦</span></div>
+                    <div style={cardNoImageStyle}>
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                        <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                        <line x1="12" y1="22.08" x2="12" y2="12"/>
+                      </svg>
+                    </div>
                   )}
                   {item.condition && (
                     <span style={{ ...condBadgeStyle, backgroundColor: CONDITIONS[item.condition] || '#374151' }}>
@@ -129,7 +140,13 @@ const WishlistPage: React.FC = () => {
                     id={`remove-wish-${item.id}`}
                     title="Remove from wishlist"
                   >
-                    {removingId === item.id ? '…' : '❤️'}
+                    {removingId === item.id ? (
+                      '…'
+                    ) : (
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="#ef4444" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                      </svg>
+                    )}
                   </button>
                 </div>
 
@@ -137,33 +154,17 @@ const WishlistPage: React.FC = () => {
                 <div style={cardBodyStyle}>
                   <div style={cardCatStyle}>{item.category || 'General'}</div>
                   <h3 style={cardTitleStyle}>{item.title}</h3>
-                  {item.description && (
-                    <p style={cardDescStyle}>
-                      {item.description.slice(0, 70)}{item.description.length > 70 ? '…' : ''}
-                    </p>
-                  )}
                   <div style={cardFootStyle}>
                     <div>
                       <div style={cardPriceStyle}>₹{Number(item.price).toFixed(2)}</div>
                       <div style={cardSellerStyle}>by {item.seller_name}</div>
                     </div>
-                    <button
-                      onClick={(e) => handleAddToCart(e, item.id)}
-                      style={{
-                        ...cartBtnStyle,
-                        backgroundColor: addedId === item.id ? '#065f46' : '#111827',
-                      }}
-                      disabled={addingId === item.id || Number(item.stock) === 0}
+                    <CartButton
+                      productId={item.id}
+                      stock={item.stock}
+                      productTitle={item.title}
                       id={`wish-cart-${item.id}`}
-                    >
-                      {Number(item.stock) === 0
-                        ? 'Out of stock'
-                        : addingId === item.id
-                        ? '...'
-                        : addedId === item.id
-                        ? '✓ Added'
-                        : '+ Cart'}
-                    </button>
+                    />
                   </div>
                 </div>
               </Link>
@@ -201,10 +202,9 @@ const condBadgeStyle: React.CSSProperties = { position: 'absolute', top: '8px', 
 const heartBtnStyle: React.CSSProperties = { position: 'absolute', top: '8px', right: '8px', background: 'rgba(255,255,255,0.9)', border: 'none', borderRadius: '50%', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '14px', transition: 'transform 0.15s ease', boxShadow: '0 1px 4px rgba(0,0,0,0.15)' };
 const cardBodyStyle: React.CSSProperties = { padding: '14px', display: 'flex', flexDirection: 'column', flex: 1, gap: '4px' };
 const cardCatStyle: React.CSSProperties = { fontSize: '11px', fontWeight: '600', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' };
-const cardTitleStyle: React.CSSProperties = { fontSize: '14px', fontWeight: '600', color: '#111827', margin: '2px 0 4px 0', lineHeight: '1.4' };
-const cardDescStyle: React.CSSProperties = { fontSize: '12px', color: '#6b7280', margin: 0, lineHeight: '1.5' };
-const cardFootStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 'auto', paddingTop: '10px' };
-const cardPriceStyle: React.CSSProperties = { fontSize: '16px', fontWeight: '800', color: '#111827' };
+const cardTitleStyle: React.CSSProperties = { fontSize: '14px', fontWeight: '600', color: '#111827', margin: '2px 0 4px 0', lineHeight: '1.35', height: '38px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' };
+const cardFootStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: '10px' };
+const cardPriceStyle: React.CSSProperties = { fontSize: '16px', fontWeight: '800', color: '#111827', display: 'flex', alignItems: 'center' };
 const cardSellerStyle: React.CSSProperties = { fontSize: '11px', color: '#9ca3af', marginTop: '2px' };
 const cartBtnStyle: React.CSSProperties = { padding: '6px 12px', borderRadius: '6px', border: 'none', color: '#ffffff', fontSize: '12px', fontWeight: '600', cursor: 'pointer', transition: 'background-color 0.15s ease', fontFamily: "'Inter', system-ui, sans-serif", flexShrink: 0 };
 

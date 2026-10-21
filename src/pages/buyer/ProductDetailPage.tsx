@@ -6,8 +6,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import AppLayout from '../../components/Layout/AppLayout';
+import PublicNavbar from '../../components/PublicNavbar/PublicNavbar';
 import { getProductById, Product } from '../../services/productService';
 import { useCart } from '../../context/CartContext';
+import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { getWishlistIds, addToWishlist, removeFromWishlist } from '../../services/userService';
 
@@ -23,6 +25,7 @@ const ProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { addToCart } = useCart();
   const { showToast } = useToast();
+  const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   const [product, setProduct] = useState<Product | null>(null);
@@ -80,6 +83,7 @@ const ProductDetailPage: React.FC = () => {
 
   const handleAddToCart = async () => {
     if (!product) return;
+    if (!isAuthenticated) { navigate('/login'); return; }
     setActionError('');
     setIsAdding(true);
     try {
@@ -98,6 +102,7 @@ const ProductDetailPage: React.FC = () => {
 
   const handleBuyNow = async () => {
     if (!product) return;
+    if (!isAuthenticated) { navigate('/login'); return; }
     setActionError('');
     try {
       await addToCart(product.id, quantity);
@@ -106,46 +111,56 @@ const ProductDetailPage: React.FC = () => {
       const msg = err?.response?.data?.message || 'Failed to add item to cart.';
       setActionError(msg);
       showToast(msg, 'warning');
-      // If error is because it's already in cart, navigate to cart anyway
       if (err?.response?.status === 409) {
         navigate('/cart');
       }
     }
   };
 
+  // Determine which layout to use based on auth state
+  const Wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) =>
+    isAuthenticated
+      ? <AppLayout>{children}</AppLayout>
+      : (
+          <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb', fontFamily: "'Inter', system-ui, sans-serif" }}>
+            <PublicNavbar />
+            <div style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 20px' }}>{children}</div>
+          </div>
+        );
+
   if (isLoading) {
     return (
-      <AppLayout>
+      <Wrapper>
         <div style={centerStyle}>
           <div style={spinnerStyle} />
           <p style={{ color: '#6b7280', marginTop: '12px' }}>Loading product...</p>
         </div>
-      </AppLayout>
+      </Wrapper>
     );
   }
 
   if (error || !product) {
     return (
-      <AppLayout>
+      <Wrapper>
         <div style={centerStyle}>
           <span style={{ fontSize: '48px' }}>😕</span>
           <h2 style={{ color: '#374151', margin: '16px 0 8px 0' }}>
             {error || 'Product not found'}
           </h2>
-          <Link to="/products" style={backLinkStyle}>← Back to Products</Link>
+          <Link to="/" style={backLinkStyle}>← Back to Products</Link>
         </div>
-      </AppLayout>
+      </Wrapper>
     );
   }
 
   const condition = product.condition ? CONDITIONS[product.condition] : null;
 
   return (
-    <AppLayout>
-      <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+    <Wrapper>
+      <div style={{ maxWidth: isAuthenticated ? '900px' : '860px', margin: '0 auto' }}>
         {/* Breadcrumb */}
         <div style={breadcrumbStyle}>
-          <Link to="/products" style={breadcrumbLinkStyle}>Products</Link>
+          <Link to="/" style={breadcrumbLinkStyle}>Products</Link>
           <span style={{ color: '#d1d5db' }}>›</span>
           {product.category && (
             <>
@@ -163,11 +178,7 @@ const ProductDetailPage: React.FC = () => {
           {/* Left: Image */}
           <div style={imageColStyle}>
             {product.image_url ? (
-              <img
-                src={product.image_url}
-                alt={product.title}
-                style={mainImageStyle}
-              />
+              <img src={product.image_url} alt={product.title} style={mainImageStyle} />
             ) : (
               <div style={noImageStyle}>
                 <span style={{ fontSize: '64px' }}>📦</span>
@@ -184,11 +195,7 @@ const ProductDetailPage: React.FC = () => {
                 <span style={categoryTagStyle}>{product.category}</span>
               )}
               {condition && (
-                <span style={{
-                  ...conditionTagStyle,
-                  color: condition.color,
-                  backgroundColor: condition.bg,
-                }}>
+                <span style={{ ...conditionTagStyle, color: condition.color, backgroundColor: condition.bg }}>
                   {condition.label}
                 </span>
               )}
@@ -199,9 +206,7 @@ const ProductDetailPage: React.FC = () => {
             <div style={priceRowStyle}>
               <span style={priceStyle}>₹{Number(product.price).toFixed(2)}</span>
               <span style={stockStyle}>
-                {Number(product.stock) > 0
-                  ? `${product.stock} in stock`
-                  : '❌ Out of stock'}
+                {Number(product.stock) > 0 ? `${product.stock} in stock` : 'Out of stock'}
               </span>
             </div>
 
@@ -227,27 +232,19 @@ const ProductDetailPage: React.FC = () => {
               <div style={quantityRowStyle}>
                 <span style={qtyLabelStyle}>Quantity</span>
                 <div style={qtyControlsStyle}>
-                  <button
-                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                    style={qtyBtnStyle}
-                    id="qty-dec"
-                  >
-                    −
-                  </button>
+                  <button onClick={() => setQuantity((q) => Math.max(1, q - 1))} style={qtyBtnStyle} id="qty-dec">−</button>
                   <span style={qtyValueStyle}>{quantity}</span>
                   <button
                     onClick={() => setQuantity((q) => Math.min(Number(product.stock), q + 1))}
                     style={qtyBtnStyle}
                     disabled={quantity >= Number(product.stock)}
                     id="qty-inc"
-                  >
-                    +
-                  </button>
+                  >+</button>
                 </div>
               </div>
             )}
 
-            {/* Error banner if any */}
+            {/* Error banner */}
             {actionError && (
               <div style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -259,67 +256,72 @@ const ProductDetailPage: React.FC = () => {
                   onClick={() => setActionError('')}
                   style={{ background: 'none', border: 'none', color: '#991b1b', cursor: 'pointer', fontWeight: 'bold' }}
                   aria-label="Dismiss error"
-                >
-                  ✕
-                </button>
+                >✕</button>
               </div>
             )}
 
             {/* Action buttons */}
-            <div style={actionBtnsStyle}>
-              <button
-                onClick={handleAddToCart}
-                disabled={isAdding || Number(product.stock) === 0}
-                style={{
-                  ...addToCartBtnStyle,
-                  backgroundColor: added ? '#065f46' : '#111827',
-                }}
-                id="detail-add-to-cart-btn"
-              >
-                {isAdding ? 'Adding...' : added ? '✓ Added to Cart' : '+ Add to Cart'}
-              </button>
-              <div style={{ display: 'flex', gap: '12px' }}>
+            {isAuthenticated ? (
+              <div style={actionBtnsStyle}>
                 <button
-                  onClick={handleBuyNow}
-                  disabled={Number(product.stock) === 0}
-                  style={{ ...buyNowBtnStyle, flex: 1 }}
-                  id="detail-buy-now-btn"
+                  onClick={handleAddToCart}
+                  disabled={isAdding || Number(product.stock) === 0}
+                  style={{ ...addToCartBtnStyle, backgroundColor: added ? '#065f46' : '#1d9c50' }}
+                  id="detail-add-to-cart-btn"
                 >
-                  Buy Now →
+                  {isAdding ? 'Adding...' : added ? '✓ Added to Cart' : '+ Add to Cart'}
                 </button>
-                <button
-                  onClick={handleWishlistToggle}
-                  disabled={wishlistLoading}
-                  style={wishBtnStyle(isWishlisted)}
-                  id="detail-wishlist-btn"
-                  title={isWishlisted ? 'Remove from wishlist' : 'Save to wishlist'}
-                >
-                  {wishlistLoading ? '…' : isWishlisted ? '❤️' : '🤍'}
-                </button>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button
+                    onClick={handleBuyNow}
+                    disabled={Number(product.stock) === 0}
+                    style={{ ...buyNowBtnStyle, flex: 1 }}
+                    id="detail-buy-now-btn"
+                  >
+                    Buy Now →
+                  </button>
+                  <button
+                    onClick={handleWishlistToggle}
+                    disabled={wishlistLoading}
+                    style={wishBtnStyle(isWishlisted)}
+                    id="detail-wishlist-btn"
+                    title={isWishlisted ? 'Remove from wishlist' : 'Save to wishlist'}
+                  >
+                    {wishlistLoading ? '…' : isWishlisted ? '❤️' : '🤍'}
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div style={{ marginTop: '16px' }}>
+                <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '12px' }}>
+                  Sign in to add this item to your cart or buy it.
+                </p>
+                <Link to="/login" style={signInToBuyBtnStyle} id="detail-signin-btn">
+                  Sign in to Buy
+                </Link>
+              </div>
+            )}
 
             {/* Listed date */}
             <p style={listedStyle}>
               Listed on{' '}
               {new Date(product.created_at).toLocaleDateString('en-IN', {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric',
+                day: 'numeric', month: 'long', year: 'numeric',
               })}
             </p>
           </div>
         </div>
-      </div>
 
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-        #detail-add-to-cart-btn:hover:not(:disabled) { opacity: 0.9; }
-        #detail-buy-now-btn:hover:not(:disabled) { background-color: #1e3a5f !important; }
-        #qty-dec:hover, #qty-inc:hover:not(:disabled) { background-color: #e5e7eb !important; }
-        #detail-wishlist-btn:hover:not(:disabled) { transform: scale(1.1); }
-      `}</style>
-    </AppLayout>
+        <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+          #detail-add-to-cart-btn:hover:not(:disabled) { opacity: 0.9; }
+          #detail-buy-now-btn:hover:not(:disabled) { background-color: #1e3a5f !important; }
+          #qty-dec:hover, #qty-inc:hover:not(:disabled) { background-color: #e5e7eb !important; }
+          #detail-wishlist-btn:hover:not(:disabled) { transform: scale(1.1); }
+          #detail-signin-btn:hover { background: #374151 !important; }
+        `}</style>
+      </div>
+    </Wrapper>
   );
 };
 
@@ -464,6 +466,19 @@ const wishBtnStyle = (active: boolean): React.CSSProperties => ({
 
 const listedStyle: React.CSSProperties = {
   fontSize: '12px', color: '#9ca3af', margin: 0,
+};
+
+const signInToBuyBtnStyle: React.CSSProperties = {
+  display: 'inline-block',
+  padding: '13px 28px',
+  borderRadius: '10px',
+  backgroundColor: '#111827',
+  color: '#ffffff',
+  fontSize: '15px',
+  fontWeight: '700',
+  textDecoration: 'none',
+  transition: 'background 0.15s',
+  fontFamily: "'Inter', system-ui, sans-serif",
 };
 
 export default ProductDetailPage;

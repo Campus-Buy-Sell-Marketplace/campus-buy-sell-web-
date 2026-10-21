@@ -273,11 +273,19 @@ const CartPage: React.FC = () => {
                     style={payMethodCardStyle(paymentMethod === 'OFFLINE')}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <span style={{ fontSize: '16px' }}>{paymentMethod === 'OFFLINE' ? '🔘' : '⚪'}</span>
+                      <div style={{
+                        width: '16px',
+                        height: '16px',
+                        borderRadius: '50%',
+                        border: paymentMethod === 'OFFLINE' ? '5px solid #111827' : '2px solid #d1d5db',
+                        backgroundColor: '#ffffff',
+                        boxSizing: 'border-box',
+                        flexShrink: 0,
+                      }} />
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontSize: '13px', fontWeight: '700', color: '#111827' }}>💵 Cash at Campus Meetup</span>
-                          <span style={{ fontSize: '10px', fontWeight: '600', backgroundColor: '#dcfce7', color: '#15803d', padding: '2px 6px', borderRadius: '4px' }}>Recommended</span>
+                          <span style={{ fontSize: '13px', fontWeight: '700', color: '#111827' }}>Cash at Campus Meetup</span>
+                          <span style={{ fontSize: '10px', fontWeight: '600', backgroundColor: '#f3f4f6', color: '#111827', padding: '2px 6px', borderRadius: '4px' }}>Recommended</span>
                         </div>
                         <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>
                           Pay cash upon receiving item · Verify with 6-digit OTP
@@ -293,11 +301,19 @@ const CartPage: React.FC = () => {
                     style={payMethodCardStyle(paymentMethod === 'ONLINE')}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <span style={{ fontSize: '16px' }}>{paymentMethod === 'ONLINE' ? '🔘' : '⚪'}</span>
+                      <div style={{
+                        width: '16px',
+                        height: '16px',
+                        borderRadius: '50%',
+                        border: paymentMethod === 'ONLINE' ? '5px solid #111827' : '2px solid #d1d5db',
+                        backgroundColor: '#ffffff',
+                        boxSizing: 'border-box',
+                        flexShrink: 0,
+                      }} />
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontSize: '13px', fontWeight: '700', color: '#111827' }}>💳 Pay Online</span>
-                          <span style={{ fontSize: '10px', fontWeight: '600', backgroundColor: '#dcfce7', color: '#15803d', padding: '2px 6px', borderRadius: '4px' }}>⚡ Instant Online</span>
+                          <span style={{ fontSize: '13px', fontWeight: '700', color: '#111827' }}>Pay Online</span>
+                          <span style={{ fontSize: '10px', fontWeight: '600', backgroundColor: '#f3f4f6', color: '#111827', padding: '2px 6px', borderRadius: '4px' }}>Instant Online</span>
                         </div>
                         <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>
                           Cards, UPI, Google Pay & Net Banking via Razorpay
@@ -310,7 +326,7 @@ const CartPage: React.FC = () => {
                 {/* Campus Meetup / Handover Details */}
                 <div style={{ backgroundColor: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px', marginTop: '10px' }}>
                   <p style={{ fontSize: '12px', fontWeight: '700', color: '#111827', margin: '0 0 10px 0' }}>
-                    📍 Campus Handover Spot & Time
+                    Campus Handover Spot & Time
                   </p>
 
                     <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#4b5563', marginBottom: '4px' }}>
@@ -322,12 +338,12 @@ const CartPage: React.FC = () => {
                       onChange={(e) => setMeetupLocation(e.target.value)}
                       style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '12px', backgroundColor: '#ffffff', color: '#111827', marginBottom: '10px', outline: 'none' }}
                     >
-                      <option value="Campus Central Library Gate">🏛️ Campus Central Library Gate</option>
-                      <option value="Student Activity Center (SAC)">🏫 Student Activity Center (SAC)</option>
-                      <option value="Main Canteen / Food Court">☕ Main Canteen / Food Court</option>
-                      <option value="Academic Block A - Reception">🏢 Academic Block A - Reception</option>
-                      <option value="Hostel Block - Common Area">🛋️ Hostel Block - Common Area</option>
-                      <option value="Sports Complex / Ground">🏃 Sports Complex / Ground</option>
+                      <option value="Campus Central Library Gate">Campus Central Library Gate</option>
+                      <option value="Student Activity Center (SAC)">Student Activity Center (SAC)</option>
+                      <option value="Main Canteen / Food Court">Main Canteen / Food Court</option>
+                      <option value="Academic Block A - Reception">Academic Block A - Reception</option>
+                      <option value="Hostel Block - Common Area">Hostel Block - Common Area</option>
+                      <option value="Sports Complex / Ground">Sports Complex / Ground</option>
                     </select>
 
                     <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#4b5563', marginBottom: '4px' }}>
@@ -339,10 +355,10 @@ const CartPage: React.FC = () => {
                       onChange={(e) => setMeetupTime(e.target.value)}
                       style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '12px', backgroundColor: '#ffffff', color: '#111827', marginBottom: '10px', outline: 'none' }}
                     >
-                      <option value="Today (4:30 PM - 6:00 PM)">⚡ Today (4:30 PM - 6:00 PM)</option>
-                      <option value="Tomorrow (1:00 PM - 2:00 PM - Lunch)">☀️ Tomorrow (1:00 PM - 2:00 PM - Lunch)</option>
-                      <option value="Tomorrow (4:00 PM - 5:30 PM)">🌆 Tomorrow (4:00 PM - 5:30 PM)</option>
-                      <option value="Day After Tomorrow (4:00 PM - 5:30 PM)">📅 Day After Tomorrow (4:00 PM - 5:30 PM)</option>
+                      <option value="Today (4:30 PM - 6:00 PM)">Today (4:30 PM - 6:00 PM)</option>
+                      <option value="Tomorrow (1:00 PM - 2:00 PM - Lunch)">Tomorrow (1:00 PM - 2:00 PM - Lunch)</option>
+                      <option value="Tomorrow (4:00 PM - 5:30 PM)">Tomorrow (4:00 PM - 5:30 PM)</option>
+                      <option value="Day After Tomorrow (4:00 PM - 5:30 PM)">Day After Tomorrow (4:00 PM - 5:30 PM)</option>
                     </select>
 
                     <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#4b5563', marginBottom: '4px' }}>
@@ -361,7 +377,7 @@ const CartPage: React.FC = () => {
 
               {checkoutError && (
                 <div style={checkoutErrorStyle}>
-                  <span>⚠️ {checkoutError}</span>
+                  <span>{checkoutError}</span>
                   <button
                     onClick={() => setCheckoutError('')}
                     style={{ background: 'none', border: 'none', color: '#991b1b', cursor: 'pointer', fontWeight: 'bold' }}
@@ -445,7 +461,7 @@ const CartPage: React.FC = () => {
                   flex: 1,
                   padding: '12px',
                   borderRadius: '8px',
-                  backgroundColor: '#4f46e5',
+                  backgroundColor: '#111827',
                   color: '#ffffff',
                   border: 'none',
                   fontSize: '13px',
@@ -454,10 +470,14 @@ const CartPage: React.FC = () => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '6px',
+                  gap: '8px',
+                  transition: 'background-color 0.15s ease',
                 }}
               >
-                💬 Chat with Seller
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+                Chat with Seller
               </button>
               <button
                 id="otp-done-btn"
@@ -482,6 +502,7 @@ const CartPage: React.FC = () => {
         #checkout-btn:hover:not(:disabled) { background-color: #374151 !important; }
         #shop-now-btn:hover { background-color: #374151 !important; }
         #otp-done-btn:hover { background-color: #374151 !important; }
+        #otp-chat-btn:hover { background-color: #374151 !important; }
         #pay-offline-btn:hover, #pay-online-btn:hover { opacity: 0.85; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }

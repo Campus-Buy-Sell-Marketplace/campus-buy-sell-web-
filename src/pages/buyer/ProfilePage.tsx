@@ -13,7 +13,7 @@ const ProfilePage: React.FC = () => {
     { label: 'Full Name',  value: user?.name  ?? '—' },
     { label: 'Email',      value: user?.email ?? '—' },
     { label: 'Account Role', value: role === 'SUPER_ADMIN' ? 'Super Admin' : role === 'ADMIN' ? 'Admin' : 'User' },
-    { label: 'Seller Status', value: isSeller ? '✅ Active Seller' : '—  Not a seller yet' },
+    { label: 'Seller Status', value: isSeller ? 'Active Seller' : 'Not a seller yet' },
   ];
 
   return (
