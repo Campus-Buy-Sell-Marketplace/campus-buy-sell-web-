@@ -4,6 +4,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { QRCodeSVG } from 'qrcode.react';
 import AppLayout from '../../components/Layout/AppLayout';
 import {
   fetchPayouts,
@@ -259,22 +260,23 @@ const AdminPayoutsPage: React.FC = () => {
 
                       <td style={{ padding: '14px 10px', textAlign: 'right' }}>
                         {p.status === 'PENDING' ? (
-                          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                            {p.seller_upi_id !== 'NOT_SET' && (
-                              <a
-                                href={`upi://pay?pa=${p.seller_upi_id}&pn=${encodeURIComponent(p.account_holder_name || p.seller_name)}&am=${Number(p.net_payout_amount).toFixed(2)}&cu=INR&tn=${encodeURIComponent(`Payout for Order ${p.order_id.slice(0, 8)}`)}`}
-                                style={upiPayBtnStyle}
-                                title="Open UPI app (Google Pay / PhonePe) on mobile device"
+                          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                            {p.seller_upi_id !== 'NOT_SET' ? (
+                              <button
+                                onClick={() => openMarkPaidModal(p)}
+                                style={scanPayBtnStyle}
+                                title="Show UPI QR Code to scan with Google Pay, PhonePe, or Paytm"
                               >
-                                📲 Pay via UPI
-                              </a>
+                                📸 Scan & Pay (₹{Number(p.net_payout_amount).toFixed(0)})
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => openMarkPaidModal(p)}
+                                style={markPaidBtnStyle}
+                              >
+                                ✓ Mark Paid
+                              </button>
                             )}
-                            <button
-                              onClick={() => openMarkPaidModal(p)}
-                              style={markPaidBtnStyle}
-                            >
-                              ✓ Mark Paid
-                            </button>
                           </div>
                         ) : (
                           <span style={{ color: '#059669', fontSize: '12px', fontWeight: '600' }}>
@@ -290,13 +292,13 @@ const AdminPayoutsPage: React.FC = () => {
           )}
         </div>
 
-        {/* Modal: Mark as Paid */}
+        {/* Modal: UPI QR Code & Mark as Paid */}
         {selectedPayout && (
           <div style={modalOverlayStyle}>
-            <div style={modalCardStyle}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <div style={{ ...modalCardStyle, maxWidth: '520px', maxHeight: '90vh', overflowY: 'auto' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                 <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: '#111827' }}>
-                  Record UPI Transfer
+                  Pay Seller via UPI
                 </h3>
                 <button
                   onClick={() => setSelectedPayout(null)}
@@ -306,33 +308,85 @@ const AdminPayoutsPage: React.FC = () => {
                 </button>
               </div>
 
+              {/* Dynamic QR Code Section */}
+              {selectedPayout.seller_upi_id !== 'NOT_SET' ? (
+                <div style={qrContainerStyle}>
+                  <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: '700', color: '#059669', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Scan with any UPI App
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>
+                      Google Pay • PhonePe • Paytm • BHIM • Cred
+                    </div>
+                  </div>
+
+                  <div style={qrBoxStyle}>
+                    <QRCodeSVG
+                      value={`upi://pay?pa=${selectedPayout.seller_upi_id}&pn=${encodeURIComponent(selectedPayout.account_holder_name || selectedPayout.seller_name)}&am=${Number(selectedPayout.net_payout_amount).toFixed(2)}&cu=INR&tn=${encodeURIComponent(`Campus Order ${selectedPayout.order_id.slice(0, 8)} Payout`)}`}
+                      size={180}
+                      level="M"
+                      includeMargin={true}
+                    />
+                  </div>
+
+                  <div style={{ textAlign: 'center', marginTop: '10px' }}>
+                    <div style={{ fontSize: '24px', fontWeight: '800', color: '#111827' }}>
+                      ₹{Number(selectedPayout.net_payout_amount).toFixed(2)}
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>
+                      Exact amount and payee will auto-fill on your phone!
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '10px' }}>
+                    <span style={{ fontFamily: 'monospace', fontSize: '12px', background: '#f3f4f6', padding: '4px 8px', borderRadius: '4px', fontWeight: '600' }}>
+                      {selectedPayout.seller_upi_id}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyUpi(selectedPayout.seller_upi_id, 'modal')}
+                      style={copyBtnStyle}
+                    >
+                      {copySuccess === 'modal' ? '✓ Copied' : 'Copy UPI'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div style={warningBannerStyle}>
+                  <strong>⚠️ Seller has not added a UPI ID yet.</strong>
+                  <div style={{ fontSize: '12px', marginTop: '4px' }}>
+                    Please ask {selectedPayout.seller_name} to enter their UPI ID in their Seller Dashboard under 'Earnings & UPI'.
+                  </div>
+                </div>
+              )}
+
               <div style={modalDetailBoxStyle}>
                 <div><strong>Seller:</strong> {selectedPayout.seller_name} ({selectedPayout.seller_email})</div>
-                <div><strong>UPI ID:</strong> <span style={{ fontFamily: 'monospace' }}>{selectedPayout.seller_upi_id}</span></div>
-                <div><strong>Order ID:</strong> #{selectedPayout.order_id.slice(0, 8)}</div>
-                <div style={{ fontSize: '16px', marginTop: '4px', color: '#059669' }}>
-                  <strong>Net Amount Transferred:</strong> ₹{Number(selectedPayout.net_payout_amount).toFixed(2)}
+                <div><strong>Order:</strong> #{selectedPayout.order_id.slice(0, 8)}</div>
+                <div>
+                  <strong>Gross Sale:</strong> ₹{Number(selectedPayout.order_amount).toFixed(2)} | 
+                  <strong> 2% Fee Kept:</strong> ₹{Number(selectedPayout.commission_amount).toFixed(2)}
                 </div>
               </div>
 
               {modalError && <div style={errorAlertStyle}>{modalError}</div>}
 
-              <form onSubmit={handleConfirmPaid} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {/* Step 2 Form: Confirm Payment */}
+              <form onSubmit={handleConfirmPaid} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div>
                   <label style={formLabelStyle}>
-                    UPI Transaction Reference / UTR Number <span style={{ color: '#dc2626' }}>*</span>
+                    Step 2: Enter UPI Transaction ID / UTR Number <span style={{ color: '#dc2626' }}>*</span>
                   </label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. 523829104829 or UPI/42981048"
+                    placeholder="e.g. 523829104829 from your GPay/PhonePe receipt"
                     value={utrNumber}
                     onChange={(e) => setUtrNumber(e.target.value)}
                     style={inputStyle}
-                    autoFocus
                   />
                   <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px' }}>
-                    Copy this 12-digit UPI reference from your Google Pay, PhonePe, or bank transfer receipt.
+                    Enter the 12-digit reference number shown on your UPI app after scanning and paying.
                   </div>
                 </div>
 
@@ -340,7 +394,7 @@ const AdminPayoutsPage: React.FC = () => {
                   <label style={formLabelStyle}>Admin Notes (Optional)</label>
                   <input
                     type="text"
-                    placeholder="e.g. Transferred via GPay by admin"
+                    placeholder="e.g. Paid via GPay QR scan"
                     value={adminNotes}
                     onChange={(e) => setAdminNotes(e.target.value)}
                     style={inputStyle}
@@ -360,7 +414,7 @@ const AdminPayoutsPage: React.FC = () => {
                     disabled={submitting}
                     style={primaryBtnStyle}
                   >
-                    {submitting ? 'Recording...' : 'Confirm & Mark as Paid'}
+                    {submitting ? 'Recording...' : '✓ Confirm & Mark as Paid'}
                   </button>
                 </div>
               </form>
@@ -385,14 +439,17 @@ const cardStyle: React.CSSProperties    = { backgroundColor: '#ffffff', border: 
 const tabStyle: React.CSSProperties     = { padding: '8px 14px', border: '1px solid #e5e7eb', borderRadius: '8px', background: '#fff', fontSize: '13px', fontWeight: '600', color: '#6b7280', cursor: 'pointer' };
 const activeTabStyle: React.CSSProperties = { padding: '8px 14px', border: '1px solid #111827', borderRadius: '8px', background: '#111827', fontSize: '13px', fontWeight: '600', color: '#fff', cursor: 'pointer' };
 const refreshBtnStyle: React.CSSProperties = { padding: '8px 14px', border: '1px solid #e5e7eb', borderRadius: '8px', background: '#fff', fontSize: '12px', fontWeight: '600', color: '#374151', cursor: 'pointer' };
-const copyBtnStyle: React.CSSProperties = { padding: '2px 8px', border: '1px solid #d1d5db', borderRadius: '4px', background: '#fff', fontSize: '11px', fontWeight: '600', color: '#374151', cursor: 'pointer' };
-const upiPayBtnStyle: React.CSSProperties = { padding: '6px 12px', backgroundColor: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', borderRadius: '6px', fontSize: '12px', fontWeight: '600', textDecoration: 'none', cursor: 'pointer', display: 'inline-block' };
-const markPaidBtnStyle: React.CSSProperties = { padding: '6px 12px', backgroundColor: '#111827', color: '#ffffff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' };
+const copyBtnStyle: React.CSSProperties = { padding: '3px 8px', border: '1px solid #d1d5db', borderRadius: '4px', background: '#fff', fontSize: '11px', fontWeight: '600', color: '#374151', cursor: 'pointer' };
+const scanPayBtnStyle: React.CSSProperties = { padding: '8px 14px', backgroundColor: '#059669', color: '#ffffff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', boxShadow: '0 1px 2px rgba(5, 150, 105, 0.2)' };
+const markPaidBtnStyle: React.CSSProperties = { padding: '8px 14px', backgroundColor: '#111827', color: '#ffffff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' };
 const paidBadgeStyle: React.CSSProperties = { backgroundColor: '#dcfce7', color: '#166534', padding: '4px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700' };
 const pendingBadgeStyle: React.CSSProperties = { backgroundColor: '#fef3c7', color: '#92400e', padding: '4px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700' };
-const modalOverlayStyle: React.CSSProperties = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 };
-const modalCardStyle: React.CSSProperties = { backgroundColor: '#ffffff', borderRadius: '14px', padding: '24px', width: '100%', maxWidth: '480px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' };
-const modalDetailBoxStyle: React.CSSProperties = { backgroundColor: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '12px 16px', fontSize: '13px', display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '16px' };
+const modalOverlayStyle: React.CSSProperties = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' };
+const modalCardStyle: React.CSSProperties = { backgroundColor: '#ffffff', borderRadius: '16px', padding: '24px', width: '100%', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' };
+const modalDetailBoxStyle: React.CSSProperties = { backgroundColor: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px 14px', fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '14px' };
+const qrContainerStyle: React.CSSProperties = { backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '16px' };
+const qrBoxStyle: React.CSSProperties = { backgroundColor: '#ffffff', padding: '12px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', display: 'inline-block' };
+const warningBannerStyle: React.CSSProperties = { backgroundColor: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', padding: '12px 14px', borderRadius: '8px', marginBottom: '14px', fontSize: '13px' };
 const formLabelStyle: React.CSSProperties = { display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' };
 const inputStyle: React.CSSProperties   = { width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' };
 const primaryBtnStyle: React.CSSProperties = { padding: '10px 18px', backgroundColor: '#111827', color: '#ffffff', borderRadius: '8px', border: 'none', fontSize: '13px', fontWeight: '600', cursor: 'pointer' };
