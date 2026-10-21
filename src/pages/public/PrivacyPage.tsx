@@ -77,8 +77,8 @@ const PrivacyPage: React.FC = () => {
               <p style={paragraphStyle}>
                 Users retain the right to view, update, or request deletion of their account profile by contacting
                 our support desk at{' '}
-                <a href="mailto:support.lavsa@gmail.com" style={linkStyle}>
-                  support.lavsa@gmail.com
+                <a href="mailto:lavanyamyadawad@gmail.com" style={linkStyle}>
+                  lavanyamyadawad@gmail.com
                 </a>
                 . Transaction records required for accounting and regulatory compliance are retained in accordance with statutory requirements.
               </p>
@@ -92,8 +92,8 @@ const PrivacyPage: React.FC = () => {
                 <strong>Lavanya Mahantesh Yadawad</strong>
                 <br />
                 Email:{' '}
-                <a href="mailto:support.lavsa@gmail.com" style={linkStyle}>
-                  support.lavsa@gmail.com
+                <a href="mailto:lavanyamyadawad@gmail.com" style={linkStyle}>
+                  lavanyamyadawad@gmail.com
                 </a>
                 <br />
                 Phone: +91 90193 01641

@@ -54,8 +54,8 @@ const ContactUsPage: React.FC = () => {
                   <tr>
                     <td style={thStyle}>Official Email</td>
                     <td style={tdStyle}>
-                      <a href="mailto:support.lavsa@gmail.com" style={linkStyle}>
-                        support.lavsa@gmail.com
+                      <a href="mailto:lavanyamyadawad@gmail.com" style={linkStyle}>
+                        lavanyamyadawad@gmail.com
                       </a>
                     </td>
                   </tr>
@@ -86,8 +86,8 @@ const ContactUsPage: React.FC = () => {
                 <strong>Step 1: In-App Support</strong>
                 <p style={stepDescStyle}>
                   Contact our support team directly via email at{' '}
-                  <a href="mailto:support.lavsa@gmail.com" style={linkStyle}>
-                    support.lavsa@gmail.com
+                  <a href="mailto:lavanyamyadawad@gmail.com" style={linkStyle}>
+                    lavanyamyadawad@gmail.com
                   </a>{' '}
                   with your Order ID and payment transaction reference.
                 </p>

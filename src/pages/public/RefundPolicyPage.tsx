@@ -111,8 +111,8 @@ const RefundPolicyPage: React.FC = () => {
               </p>
               <div style={contactBoxStyle}>
                 <strong>Support Desk:</strong>{' '}
-                <a href="mailto:support.lavsa@gmail.com" style={linkStyle}>
-                  support.lavsa@gmail.com
+                <a href="mailto:lavanyamyadawad@gmail.com" style={linkStyle}>
+                  lavanyamyadawad@gmail.com
                 </a>
                 <br />
                 <strong>Helpline:</strong>{' '}

@@ -97,8 +97,8 @@ const Footer: React.FC = () => {
             <span style={contactIconStyle}>📧</span>
             <div>
               <div style={contactLabelStyle}>Support Email</div>
-              <a href="mailto:support.lavsa@gmail.com" style={contactLinkStyle}>
-                support.lavsa@gmail.com
+              <a href="mailto:lavanyamyadawad@gmail.com" style={contactLinkStyle}>
+                lavanyamyadawad@gmail.com
               </a>
             </div>
           </div>
