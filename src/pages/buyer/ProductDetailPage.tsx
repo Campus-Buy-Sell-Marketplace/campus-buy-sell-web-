@@ -274,26 +274,20 @@ const ProductDetailPage: React.FC = () => {
             {/* Action buttons */}
             {isAuthenticated ? (
               <div style={actionBtnsStyle}>
-                <button
-                  onClick={handleAddToCart}
-                  disabled={isAdding || Number(product.stock) === 0}
-                  style={{
-                    ...addToCartBtnStyle,
-                    backgroundColor: added ? '#f3f4f6' : '#ffffff',
-                    color: '#111827',
-                  }}
-                  id="detail-add-to-cart-btn"
-                >
-                  {isAdding ? 'Adding...' : added ? '✓ Added to Cart' : '+ Add to Cart'}
-                </button>
-                <div style={{ display: 'flex', gap: '12px' }}>
+                {/* Row 1: Add to Cart + Wishlist */}
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'stretch' }}>
                   <button
-                    onClick={handleBuyNow}
-                    disabled={Number(product.stock) === 0}
-                    style={{ ...buyNowBtnStyle, flex: 1 }}
-                    id="detail-buy-now-btn"
+                    onClick={handleAddToCart}
+                    disabled={isAdding || Number(product.stock) === 0}
+                    style={{
+                      ...addToCartBtnStyle,
+                      flex: 1,
+                      backgroundColor: added ? '#f3f4f6' : '#ffffff',
+                      color: '#111827',
+                    }}
+                    id="detail-add-to-cart-btn"
                   >
-                    Buy Now →
+                    {isAdding ? 'Adding...' : added ? '✓ Added to Cart' : '+ Add to Cart'}
                   </button>
                   <button
                     onClick={handleWishlistToggle}
@@ -316,6 +310,16 @@ const ProductDetailPage: React.FC = () => {
                     </svg>
                   </button>
                 </div>
+
+                {/* Row 2: Buy Now */}
+                <button
+                  onClick={handleBuyNow}
+                  disabled={Number(product.stock) === 0}
+                  style={buyNowBtnStyle}
+                  id="detail-buy-now-btn"
+                >
+                  Buy Now →
+                </button>
               </div>
             ) : (
               <div style={{ marginTop: '16px' }}>
@@ -485,7 +489,7 @@ const buyNowBtnStyle: React.CSSProperties = {
 
 const wishBtnStyle = (active: boolean): React.CSSProperties => ({
   padding: '14px 18px', borderRadius: '10px',
-  border: '1.5px solid #e5e7eb',
+  border: '1.5px solid #111827',
   backgroundColor: active ? '#f3f4f6' : '#ffffff',
   cursor: 'pointer', transition: 'all 0.18s ease', flexShrink: 0,
   display: 'flex', alignItems: 'center', justifyContent: 'center',
