@@ -14,11 +14,11 @@ import { useToast } from '../../context/ToastContext';
 import { getWishlistIds, addToWishlist, removeFromWishlist } from '../../services/userService';
 
 const CONDITIONS: Record<string, { label: string; color: string; bg: string }> = {
-  NEW:      { label: 'New',       color: '#065f46', bg: '#f0fdf4' },
-  LIKE_NEW: { label: 'Like New',  color: '#1e40af', bg: '#eff6ff' },
+  NEW:      { label: 'New',       color: '#111827', bg: '#f3f4f6' },
+  LIKE_NEW: { label: 'Like New',  color: '#111827', bg: '#f3f4f6' },
   GOOD:     { label: 'Good',      color: '#374151', bg: '#f3f4f6' },
-  FAIR:     { label: 'Fair',      color: '#92400e', bg: '#fffbeb' },
-  POOR:     { label: 'Poor',      color: '#991b1b', bg: '#fef2f2' },
+  FAIR:     { label: 'Fair',      color: '#4b5563', bg: '#f3f4f6' },
+  POOR:     { label: 'Poor',      color: '#6b7280', bg: '#f3f4f6' },
 };
 
 const ProductDetailPage: React.FC = () => {
@@ -143,8 +143,12 @@ const ProductDetailPage: React.FC = () => {
     return (
       <Wrapper>
         <div style={centerStyle}>
-          <span style={{ fontSize: '48px' }}>😕</span>
-          <h2 style={{ color: '#374151', margin: '16px 0 8px 0' }}>
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: '0 auto 12px auto' }}>
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <h2 style={{ color: '#374151', margin: '8px 0 8px 0' }}>
             {error || 'Product not found'}
           </h2>
           <Link to="/" style={backLinkStyle}>← Back to Products</Link>
@@ -181,7 +185,11 @@ const ProductDetailPage: React.FC = () => {
               <img src={product.image_url} alt={product.title} style={mainImageStyle} />
             ) : (
               <div style={noImageStyle}>
-                <span style={{ fontSize: '64px' }}>📦</span>
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                  <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                  <line x1="12" y1="22.08" x2="12" y2="12"/>
+                </svg>
                 <p style={{ color: '#9ca3af', margin: '8px 0 0 0', fontSize: '14px' }}>No image available</p>
               </div>
             )}
@@ -251,7 +259,10 @@ const ProductDetailPage: React.FC = () => {
                 padding: '10px 14px', borderRadius: '8px', backgroundColor: '#fef2f2',
                 border: '1px solid #fecaca', color: '#991b1b', fontSize: '13px', marginBottom: '14px',
               }}>
-                <span>⚠️ {actionError}</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#991b1b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  {actionError}
+                </span>
                 <button
                   onClick={() => setActionError('')}
                   style={{ background: 'none', border: 'none', color: '#991b1b', cursor: 'pointer', fontWeight: 'bold' }}
@@ -266,7 +277,10 @@ const ProductDetailPage: React.FC = () => {
                 <button
                   onClick={handleAddToCart}
                   disabled={isAdding || Number(product.stock) === 0}
-                  style={{ ...addToCartBtnStyle, backgroundColor: added ? '#065f46' : '#1d9c50' }}
+                  style={{
+                    ...addToCartBtnStyle,
+                    backgroundColor: added ? '#000000' : '#111827',
+                  }}
                   id="detail-add-to-cart-btn"
                 >
                   {isAdding ? 'Adding...' : added ? '✓ Added to Cart' : '+ Add to Cart'}
@@ -287,7 +301,18 @@ const ProductDetailPage: React.FC = () => {
                     id="detail-wishlist-btn"
                     title={isWishlisted ? 'Remove from wishlist' : 'Save to wishlist'}
                   >
-                    {wishlistLoading ? '…' : isWishlisted ? '❤️' : '🤍'}
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill={isWishlisted ? '#111827' : 'none'}
+                      stroke="#111827"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                    </svg>
                   </button>
                 </div>
               </div>
@@ -314,10 +339,10 @@ const ProductDetailPage: React.FC = () => {
 
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-          #detail-add-to-cart-btn:hover:not(:disabled) { opacity: 0.9; }
-          #detail-buy-now-btn:hover:not(:disabled) { background-color: #1e3a5f !important; }
+          #detail-add-to-cart-btn:hover:not(:disabled) { background-color: #000000 !important; }
+          #detail-buy-now-btn:hover:not(:disabled) { background-color: #111827 !important; color: #ffffff !important; }
           #qty-dec:hover, #qty-inc:hover:not(:disabled) { background-color: #e5e7eb !important; }
-          #detail-wishlist-btn:hover:not(:disabled) { transform: scale(1.1); }
+          #detail-wishlist-btn:hover:not(:disabled) { background-color: #f3f4f6 !important; }
           #detail-signin-btn:hover { background: #374151 !important; }
         `}</style>
       </div>
@@ -442,25 +467,26 @@ const actionBtnsStyle: React.CSSProperties = {
 };
 
 const addToCartBtnStyle: React.CSSProperties = {
-  padding: '14px', borderRadius: '10px', border: 'none',
-  color: '#ffffff', fontSize: '15px', fontWeight: '700', cursor: 'pointer',
-  transition: 'background-color 0.2s ease',
+  padding: '14px', borderRadius: '10px', border: '1.5px solid #111827',
+  backgroundColor: '#111827', color: '#ffffff', fontSize: '15px', fontWeight: '700',
+  cursor: 'pointer', transition: 'all 0.18s ease',
   fontFamily: "'Inter', system-ui, sans-serif",
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
 };
 
 const buyNowBtnStyle: React.CSSProperties = {
-  padding: '14px', borderRadius: '10px', border: '1.5px solid #1e3a5f',
-  backgroundColor: '#1e3a5f', color: '#ffffff', fontSize: '15px', fontWeight: '700',
-  cursor: 'pointer', transition: 'background-color 0.2s ease',
+  padding: '14px', borderRadius: '10px', border: '1.5px solid #111827',
+  backgroundColor: '#ffffff', color: '#111827', fontSize: '15px', fontWeight: '700',
+  cursor: 'pointer', transition: 'all 0.18s ease',
   fontFamily: "'Inter', system-ui, sans-serif",
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
 };
 
 const wishBtnStyle = (active: boolean): React.CSSProperties => ({
   padding: '14px 18px', borderRadius: '10px',
-  border: `1.5px solid ${active ? '#ef4444' : '#e5e7eb'}`,
-  backgroundColor: active ? '#fef2f2' : '#f9fafb',
-  fontSize: '18px', cursor: 'pointer',
-  transition: 'all 0.2s ease', flexShrink: 0,
+  border: '1.5px solid #e5e7eb',
+  backgroundColor: active ? '#f3f4f6' : '#ffffff',
+  cursor: 'pointer', transition: 'all 0.18s ease', flexShrink: 0,
   display: 'flex', alignItems: 'center', justifyContent: 'center',
 });
 
