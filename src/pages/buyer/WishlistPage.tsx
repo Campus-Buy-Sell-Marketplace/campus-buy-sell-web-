@@ -7,7 +7,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import AppLayout from '../../components/Layout/AppLayout';
 import { getWishlist, removeFromWishlist, WishlistItem } from '../../services/userService';
-import { useCart } from '../../context/CartContext';
 import CartButton from '../../components/CartButton/CartButton';
 
 const CONDITIONS: Record<string, string> = {
@@ -19,13 +18,10 @@ const CONDITIONS: Record<string, string> = {
 };
 
 const WishlistPage: React.FC = () => {
-  const { addToCart } = useCart();
   const [items, setItems] = useState<WishlistItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [removingId, setRemovingId] = useState<string | null>(null);
-  const [addingId, setAddingId] = useState<string | null>(null);
-  const [addedId, setAddedId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -56,17 +52,6 @@ const WishlistPage: React.FC = () => {
     }
   };
 
-  const handleAddToCart = async (e: React.MouseEvent, productId: string) => {
-    e.preventDefault();
-    setAddingId(productId);
-    try {
-      await addToCart(productId, 1);
-      setAddedId(productId);
-      setTimeout(() => setAddedId(null), 1500);
-    } finally {
-      setAddingId(null);
-    }
-  };
 
   return (
     <AppLayout>
@@ -206,6 +191,5 @@ const cardTitleStyle: React.CSSProperties = { fontSize: '14px', fontWeight: '600
 const cardFootStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: '10px' };
 const cardPriceStyle: React.CSSProperties = { fontSize: '16px', fontWeight: '800', color: '#111827', display: 'flex', alignItems: 'center' };
 const cardSellerStyle: React.CSSProperties = { fontSize: '11px', color: '#9ca3af', marginTop: '2px' };
-const cartBtnStyle: React.CSSProperties = { padding: '6px 12px', borderRadius: '6px', border: 'none', color: '#ffffff', fontSize: '12px', fontWeight: '600', cursor: 'pointer', transition: 'background-color 0.15s ease', fontFamily: "'Inter', system-ui, sans-serif", flexShrink: 0 };
 
 export default WishlistPage;

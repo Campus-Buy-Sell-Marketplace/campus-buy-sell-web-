@@ -4,11 +4,8 @@
 // ============================================================
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import AppLayout from '../../components/Layout/AppLayout';
-import { useAuth } from '../../context/AuthContext';
-import { useCart } from '../../context/CartContext';
-import { useToast } from '../../context/ToastContext';
 import CartButton from '../../components/CartButton/CartButton';
 import { getProducts, Product } from '../../services/productService';
 import { getWishlistIds, addToWishlist, removeFromWishlist } from '../../services/userService';
@@ -32,11 +29,7 @@ const CONDITION_BG: Record<string, string> = {
 };
 
 const HomePage: React.FC = () => {
-  const { user } = useAuth();
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { addToCart } = useCart();
-  const { showToast } = useToast();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);

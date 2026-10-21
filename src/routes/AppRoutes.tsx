@@ -20,7 +20,6 @@ import LoginPage from '../pages/auth/LoginPage';
 
 // Buyer Pages
 import HomePage from '../pages/buyer/HomePage';
-import ProductsPage from '../pages/buyer/ProductsPage';
 import ProductDetailPage from '../pages/buyer/ProductDetailPage';
 import OrdersPage from '../pages/buyer/OrdersPage';
 import ProfilePage from '../pages/buyer/ProfilePage';
