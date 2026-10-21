@@ -9,6 +9,11 @@ import { useAuth } from '../context/AuthContext';
 
 // Public Pages
 import LandingPage from '../pages/public/LandingPage';
+import TermsPage from '../pages/public/TermsPage';
+import PrivacyPage from '../pages/public/PrivacyPage';
+import RefundPolicyPage from '../pages/public/RefundPolicyPage';
+import ShippingPolicyPage from '../pages/public/ShippingPolicyPage';
+import ContactUsPage from '../pages/public/ContactUsPage';
 
 // Auth Pages
 import LoginPage from '../pages/auth/LoginPage';
@@ -51,6 +56,19 @@ const AppRoutes: React.FC = () => {
     <Routes>
       {/* ── Root: public landing page for everyone ── */}
       <Route path="/" element={<LandingPage />} />
+
+      {/* ── Public Regulatory & Policy Pages (Razorpay Compliance) ── */}
+      <Route path="/terms" element={<TermsPage />} />
+      <Route path="/terms-and-conditions" element={<TermsPage />} />
+      <Route path="/privacy" element={<PrivacyPage />} />
+      <Route path="/privacy-policy" element={<PrivacyPage />} />
+      <Route path="/refund-policy" element={<RefundPolicyPage />} />
+      <Route path="/cancellation-and-refund" element={<RefundPolicyPage />} />
+      <Route path="/refunds" element={<RefundPolicyPage />} />
+      <Route path="/shipping-policy" element={<ShippingPolicyPage />} />
+      <Route path="/shipping-and-delivery" element={<ShippingPolicyPage />} />
+      <Route path="/contact-us" element={<ContactUsPage />} />
+      <Route path="/contact" element={<ContactUsPage />} />
 
       {/* Public Login Route (redirects to home if already logged in) */}
       <Route

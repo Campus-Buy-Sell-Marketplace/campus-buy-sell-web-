@@ -5,6 +5,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import PublicNavbar from '../../components/PublicNavbar/PublicNavbar';
+import Footer from '../../components/Footer/Footer';
 import { getProducts, Product } from '../../services/productService';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
@@ -307,15 +308,8 @@ const LandingPage: React.FC = () => {
         </div>
       </main>
 
-      {/* ── Footer ── */}
-      <footer style={footerStyle}>
-        <div style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a', marginBottom: '4px', letterSpacing: '0.04em' }}>
-          {APP_NAME}<span style={{ color: '#6366f1' }}>.</span>
-        </div>
-        <p style={{ margin: 0, color: '#94a3b8', fontSize: '13px' }}>
-          © {new Date().getFullYear()} {APP_NAME} · {APP_TAGLINE}
-        </p>
-      </footer>
+      {/* ── Compliance Footer (Razorpay & Regulatory Compliant) ── */}
+      <Footer />
     </div>
   );
 };
@@ -621,13 +615,6 @@ const buyBtnStyle: React.CSSProperties = {
   fontSize: '12px', fontWeight: '700', cursor: 'pointer',
   transition: 'background 0.15s', fontFamily: "'Inter', system-ui, sans-serif",
   whiteSpace: 'nowrap',
-};
-
-const footerStyle: React.CSSProperties = {
-  backgroundColor: '#ffffff',
-  borderTop: '1px solid #e8edf3',
-  padding: '28px 24px',
-  textAlign: 'center',
 };
 
 export default LandingPage;

@@ -7,6 +7,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { APP_NAME } from '../../config/appConfig';
+import Footer from '../Footer/Footer';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -159,6 +160,9 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
       {/* ── Page content ── */}
       <main style={mainStyle}>{children}</main>
+
+      {/* ── Compliance Footer ── */}
+      <Footer />
 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
