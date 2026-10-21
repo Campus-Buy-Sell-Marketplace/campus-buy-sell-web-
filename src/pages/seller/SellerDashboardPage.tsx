@@ -78,6 +78,11 @@ const SellerDashboardPage: React.FC = () => {
               <div style={{ fontWeight: '600', color: '#111827', marginTop: '8px' }}>Orders</div>
               <div style={{ color: '#9ca3af', fontSize: '12px', marginTop: '4px' }}>View incoming orders</div>
             </Link>
+            <Link to="/seller/payouts" style={{ ...quickLinkCardStyle, borderColor: '#059669' }} id="ql-payouts">
+              <span style={{ fontSize: '28px' }}>💳</span>
+              <div style={{ fontWeight: '700', color: '#059669', marginTop: '8px' }}>Earnings & UPI</div>
+              <div style={{ color: '#9ca3af', fontSize: '12px', marginTop: '4px' }}>UPI payouts & net sales</div>
+            </Link>
           </div>
         </div>
 

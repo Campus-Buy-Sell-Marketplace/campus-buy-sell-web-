@@ -12,6 +12,9 @@ export interface AdminStats {
   totalStudents: number;
   totalAdmins: number;
   pendingApplications?: number;
+  pendingPayoutsCount?: number;
+  pendingPayoutsAmount?: number;
+  platformCommissionEarned?: number;
 }
 
 export interface AdminUser {
@@ -36,6 +39,28 @@ export interface SellerApplication {
   user_name: string;
   user_email: string;
   user_role: string;
+}
+
+export interface AdminPayout {
+  id: string;
+  order_id: string;
+  seller_id: string;
+  order_amount: number;
+  commission_percent: number;
+  commission_amount: number;
+  net_payout_amount: number;
+  seller_upi_id: string;
+  account_holder_name?: string | null;
+  status: 'PENDING' | 'PROCESSING' | 'PAID' | 'CANCELLED';
+  transaction_reference?: string | null;
+  admin_notes?: string | null;
+  paid_at?: string | null;
+  created_at: string;
+  seller_name: string;
+  seller_email: string;
+  seller_phone?: string | null;
+  payment_method: string;
+  order_created_at: string;
 }
 
 // GET /api/admin/stats
@@ -73,4 +98,24 @@ export async function updateSellerApplicationStatus(
     { status, adminNotes }
   );
   return data.application;
+}
+
+// GET /api/admin/payouts
+export async function fetchPayouts(status?: string): Promise<AdminPayout[]> {
+  const params = status && status !== 'ALL' ? { status } : {};
+  const { data } = await api.get<{ payouts: AdminPayout[] }>('/admin/payouts', { params });
+  return data.payouts;
+}
+
+// PATCH /api/admin/payouts/:id/mark-paid
+export async function markPayoutAsPaid(
+  payoutId: string,
+  transactionReference: string,
+  adminNotes?: string
+): Promise<AdminPayout> {
+  const { data } = await api.patch<{ payout: AdminPayout }>(
+    `/admin/payouts/${payoutId}/mark-paid`,
+    { transactionReference, adminNotes }
+  );
+  return data.payout;
 }

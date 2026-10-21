@@ -35,11 +35,13 @@ import SellerDashboardPage from '../pages/seller/SellerDashboardPage';
 import SellerProductsPage from '../pages/seller/SellerProductsPage';
 import SellerOrdersPage from '../pages/seller/SellerOrdersPage';
 import SellerOnboardingPage from '../pages/seller/SellerOnboardingPage';
+import SellerPayoutsPage from '../pages/seller/SellerPayoutsPage';
 
 // Admin Pages
 import AdminDashboardPage from '../pages/admin/AdminDashboardPage';
 import AdminUsersPage from '../pages/admin/AdminUsersPage';
 import AdminListingsPage from '../pages/admin/AdminListingsPage';
+import AdminPayoutsPage from '../pages/admin/AdminPayoutsPage';
 
 // Super Admin Pages
 import SuperAdminDashboardPage from '../pages/super-admin/SuperAdminDashboardPage';
@@ -195,6 +197,14 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/seller/payouts"
+        element={
+          <ProtectedRoute requireSeller>
+            <SellerPayoutsPage />
+          </ProtectedRoute>
+        }
+      />
 
       {/* ── Admin Routes ── */}
       <Route
@@ -218,6 +228,14 @@ const AppRoutes: React.FC = () => {
         element={
           <ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']}>
             <AdminListingsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/payouts"
+        element={
+          <ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']}>
+            <AdminPayoutsPage />
           </ProtectedRoute>
         }
       />

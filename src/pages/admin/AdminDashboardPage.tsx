@@ -24,6 +24,7 @@ const AdminDashboardPage: React.FC = () => {
     ? [
         { label: 'Total Users',           value: stats.totalUsers,           color: '#111827' },
         { label: 'Pending Seller Apps',   value: stats.pendingApplications ?? 0, color: (stats.pendingApplications ?? 0) > 0 ? '#d97706' : '#111827', link: '/admin/users' },
+        { label: 'Pending Payouts',       value: stats.pendingPayoutsCount ?? 0, color: (stats.pendingPayoutsCount ?? 0) > 0 ? '#d97706' : '#059669', link: '/admin/payouts' },
         { label: 'Active Sellers',        value: stats.totalSellers,         color: '#059669' },
         { label: 'Students / Buyers',     value: stats.totalStudents,        color: '#2563eb' },
         { label: 'Admins',                value: stats.totalAdmins,          color: '#7c3aed' },
@@ -67,8 +68,11 @@ const AdminDashboardPage: React.FC = () => {
           <p style={{ color: '#6b7280', fontSize: '14px', margin: '0 0 12px 0', lineHeight: '1.5' }}>
             All statistics and seller applications are fetched live from your Neon PostgreSQL database.
           </p>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <button style={actionBtnStyle} onClick={() => navigate('/admin/users')}>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <button style={actionBtnStyle} onClick={() => navigate('/admin/payouts')}>
+              Manage Seller Payouts →
+            </button>
+            <button style={secondaryBtnStyle} onClick={() => navigate('/admin/users')}>
               Manage Users & Seller Apps →
             </button>
             <button style={secondaryBtnStyle} onClick={() => navigate('/admin/listings')}>
