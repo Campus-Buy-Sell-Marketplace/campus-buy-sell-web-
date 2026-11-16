@@ -10,7 +10,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { io, Socket } from 'socket.io-client';
 import AppLayout from '../../components/Layout/AppLayout';
 import api from '../../services/api';
-import { API_BASE_URL } from '../../config/appConfig';
+import { API_BASE_URL, AUTH_TOKEN_KEY } from '../../config/appConfig';
 
 interface ChatMessage {
   id: string;
@@ -90,9 +90,11 @@ const ChatPage: React.FC = () => {
 
     if (!orderId) return;
 
-    // Establish WebSocket connection
+    // Establish WebSocket connection with JWT auth
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
     const socket = io(SOCKET_URL, {
       transports: ['websocket', 'polling'],
+      auth: token ? { token } : {},
       withCredentials: true,
     });
     socketRef.current = socket;
@@ -107,6 +109,10 @@ const ChatPage: React.FC = () => {
         if (prev.some((m) => m.id === incomingMsg.id)) return prev;
         return [...prev, incomingMsg];
       });
+    });
+
+    socket.on('order_error', (err: { message?: string }) => {
+      setError(err?.message || 'Access denied to this order.');
     });
 
     return () => {

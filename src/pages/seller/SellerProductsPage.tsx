@@ -6,6 +6,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import AppLayout from '../../components/Layout/AppLayout';
 import ConfirmModal from '../../components/ConfirmModal/ConfirmModal';
 import { useToast } from '../../context/ToastContext';
+import { uploadService } from '../../services/uploadService';
 import {
   getMyProducts,
   createProduct,
@@ -45,6 +46,32 @@ const SellerProductsPage: React.FC = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<ProductForm>(emptyForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      alert('Only JPEG, PNG, and WebP images are supported.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File size exceeds 5MB limit.');
+      return;
+    }
+
+    try {
+      setUploadingImage(true);
+      const url = await uploadService.uploadImage(file);
+      setForm((prev) => ({ ...prev, image_url: url }));
+    } catch (err: any) {
+      alert(err?.response?.data?.message || 'Failed to upload image.');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
@@ -300,13 +327,63 @@ const SellerProductsPage: React.FC = () => {
                     />
                   </div>
                   <div style={fieldStyle}>
-                    <label style={labelStyle}>Image URL (optional)</label>
+                    <label style={labelStyle}>Product Image</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        ref={fileInputRef}
+                        style={{ display: 'none' }}
+                        onChange={handleFileUpload}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploadingImage}
+                        style={{
+                          backgroundColor: '#f3f4f6',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          padding: '7px 12px',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: '#111827',
+                          cursor: uploadingImage ? 'not-allowed' : 'pointer',
+                        }}
+                      >
+                        {uploadingImage ? 'Uploading...' : '📁 Choose File from Device'}
+                      </button>
+
+                      {form.image_url && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <img
+                            src={form.image_url}
+                            alt="preview"
+                            style={{ width: '32px', height: '32px', borderRadius: '4px', objectFit: 'cover' }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setForm((prev) => ({ ...prev, image_url: '' }))}
+                            style={{
+                              backgroundColor: 'transparent',
+                              border: 'none',
+                              color: '#ef4444',
+                              fontSize: '11px',
+                              cursor: 'pointer',
+                              fontWeight: '500',
+                            }}
+                          >
+                            ✕ Remove
+                          </button>
+                        </div>
+                      )}
+                    </div>
                     <input
                       name="image_url"
                       type="url"
                       value={form.image_url}
                       onChange={handleFormChange}
-                      placeholder="https://..."
+                      placeholder="Or paste image URL (https://...)"
                       style={inputStyle}
                       id="product-image-url"
                     />
