@@ -1,27 +1,50 @@
 // ============================================================
-// LAVSA — 404 Not Found Page — Light Theme
+// LAVSA — 404 Not Found Page
 // ============================================================
 
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { Card } from '../components/UI/ui';
+import { IconSearch, IconArrowLeft } from '../components/UI/Icons';
 
 const NotFoundPage: React.FC = () => (
-  <div style={pageStyle}>
-    <div style={contentStyle}>
-      <div style={{ fontSize: '56px', marginBottom: '16px' }}>🔍</div>
-      <h1 style={headingStyle}>404 — Page Not Found</h1>
-      <p style={subStyle}>
-        The page you are looking for does not exist or has been moved.
+  <div
+    style={{
+      minHeight: '100vh',
+      backgroundColor: 'var(--page-bg)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 24,
+    }}
+  >
+    <Card padded style={{ textAlign: 'center', maxWidth: 420, width: '100%', padding: '40px 32px' }}>
+      <div
+        style={{
+          width: 64,
+          height: 64,
+          borderRadius: 18,
+          background: 'var(--brand-soft)',
+          color: 'var(--brand)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          margin: '0 auto 16px',
+        }}
+      >
+        <IconSearch size={32} />
+      </div>
+      <h1 style={{ color: 'var(--ink)', fontSize: 24, fontWeight: 800, margin: '0 0 8px 0' }}>
+        404 — Page Not Found
+      </h1>
+      <p style={{ color: 'var(--text-secondary)', fontSize: 14, margin: '0 0 24px 0', lineHeight: 1.5 }}>
+        The campus page you are looking for does not exist or has been moved.
       </p>
-      <Link to="/home" style={btnStyle} id="back-home-404-btn">Return to Home</Link>
-    </div>
+      <Link to="/home" className="btn btn-primary" id="back-home-404-btn">
+        <IconArrowLeft size={14} /> Return to Marketplace
+      </Link>
+    </Card>
   </div>
 );
-
-const pageStyle: React.CSSProperties    = { minHeight: '100vh', backgroundColor: '#f9fafb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Inter', system-ui, sans-serif", padding: '24px' };
-const contentStyle: React.CSSProperties = { textAlign: 'center', maxWidth: '380px' };
-const headingStyle: React.CSSProperties = { color: '#111827', fontSize: '22px', fontWeight: '700', margin: '0 0 8px 0' };
-const subStyle: React.CSSProperties     = { color: '#6b7280', fontSize: '14px', margin: '0 0 24px 0', lineHeight: '1.6' };
-const btnStyle: React.CSSProperties     = { display: 'inline-block', padding: '10px 20px', backgroundColor: '#111827', color: '#ffffff', borderRadius: '8px', textDecoration: 'none', fontSize: '14px', fontWeight: '600' };
 
 export default NotFoundPage;

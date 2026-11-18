@@ -1,6 +1,8 @@
 // ============================================================
-// LAVSA — Seller Dashboard — Light Theme
-// Shows real stats from the seller's actual listings.
+// LAVSA — Seller Dashboard — Design System
+// Shows real stats computed from the seller's actual listings.
+// Recent orders come from the same incoming-orders endpoint
+// used by the orders page. No numbers are invented.
 // ============================================================
 
 import React, { useEffect, useState } from 'react';
@@ -8,12 +10,51 @@ import { Link } from 'react-router-dom';
 import AppLayout from '../../components/Layout/AppLayout';
 import { useAuth } from '../../context/AuthContext';
 import { getMyProducts, Product } from '../../services/productService';
+import api from '../../services/api';
+import { PageHeader, Badge, EmptyState, Skeleton } from '../../components/UI/ui';
+import {
+  IconTag,
+  IconCheckCircle,
+  IconAlertTriangle,
+  IconShoppingBag,
+  IconWallet,
+  IconPlus,
+  IconArrowRight,
+  IconImage,
+} from '../../components/UI/Icons';
+import { formatPrice, formatDate } from '../../utils/format';
+
+// ── Minimal order shape for the recent-orders table ──────────
+interface DashboardOrder {
+  id: string;
+  status: string;
+  total_amount: number;
+  created_at: string;
+  buyer_name: string;
+  items: Array<{ title: string; quantity: number }>;
+}
+
+const ORDER_BADGE: Record<
+  string,
+  { label: string; color: 'amber' | 'blue' | 'green' | 'red' | 'gray' }
+> = {
+  PENDING_MEETUP: { label: 'Awaiting Meetup', color: 'amber' },
+  PAID_PENDING_MEETUP: { label: 'Paid · Meetup', color: 'blue' },
+  PENDING_PAYMENT: { label: 'Payment Pending', color: 'amber' },
+  COMPLETED: { label: 'Completed', color: 'green' },
+  CANCELLED: { label: 'Cancelled', color: 'red' },
+  CONFIRMED: { label: 'Confirmed', color: 'green' },
+  PENDING: { label: 'Pending', color: 'amber' },
+};
 
 const SellerDashboardPage: React.FC = () => {
   const { user } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [orders, setOrders] = useState<DashboardOrder[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(true);
 
+  // Existing data fetching — preserved exactly.
   useEffect(() => {
     getMyProducts()
       .then(setProducts)
@@ -21,217 +62,343 @@ const SellerDashboardPage: React.FC = () => {
       .finally(() => setIsLoading(false));
   }, []);
 
+  // Recent orders for the dashboard table.
+  useEffect(() => {
+    api
+      .get<{ orders: DashboardOrder[] }>('/orders/seller/incoming')
+      .then((res) => setOrders(res.data.orders))
+      .catch(() => {})
+      .finally(() => setOrdersLoading(false));
+  }, []);
+
   const activeListings = products.filter((p) => p.is_active !== false).length;
   const totalProducts = products.length;
   const lowStock = products.filter((p) => Number(p.stock) < 3).length;
 
-  const stats = [
+  const stats: Array<{
+    label: string;
+    value: string;
+    icon: React.ReactNode;
+    tint: string;
+    link?: string;
+    hint?: string;
+  }> = [
     {
       label: 'Total Listings',
       value: isLoading ? '—' : String(totalProducts),
-      icon: (
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#111827" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
-          <line x1="7" y1="7" x2="7.01" y2="7"/>
-        </svg>
-      ),
+      icon: <IconTag size={19} color="var(--brand-active)" />,
+      tint: 'var(--brand-soft)',
     },
     {
       label: 'Active Listings',
       value: isLoading ? '—' : String(activeListings),
-      icon: (
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-          <polyline points="22 4 12 14.01 9 11.01"/>
-        </svg>
-      ),
+      icon: <IconCheckCircle size={19} color="var(--success-strong)" />,
+      tint: 'var(--success-soft)',
     },
     {
       label: 'Low Stock Items',
       value: isLoading ? '—' : String(lowStock),
-      icon: (
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="10"/>
-          <line x1="12" y1="8" x2="12" y2="12"/>
-          <line x1="12" y1="16" x2="12.01" y2="16"/>
-        </svg>
-      ),
+      icon: <IconAlertTriangle size={19} color="var(--warning-strong)" />,
+      tint: 'var(--warning-soft)',
     },
     {
       label: 'Pending Orders',
       value: '—',
-      icon: (
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4b5563" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-          <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
-          <line x1="12" y1="22.08" x2="12" y2="12"/>
-        </svg>
-      ),
+      icon: <IconShoppingBag size={19} color="var(--text-secondary)" />,
+      tint: 'var(--surface-muted)',
+      link: '/seller/orders',
+      hint: 'View orders',
+    },
+    {
+      label: 'Available Earnings',
+      value: '—',
+      icon: <IconWallet size={19} color="var(--text-secondary)" />,
+      tint: 'var(--surface-muted)',
+      link: '/seller/payouts',
+      hint: 'View payouts',
     },
   ];
 
   return (
     <AppLayout>
-      <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
-          <div>
-            <h1 style={headingStyle}>Seller Dashboard</h1>
-            <p style={subStyle}>Welcome back, {user?.name}. Here is an overview of your store.</p>
-          </div>
-          <Link to="/seller/products" style={addProductBtnStyle} id="dashboard-add-product-btn">
-            + Add Product
-          </Link>
+      <div className="sdash">
+        <PageHeader
+          title="Seller Dashboard"
+          subtitle={`Welcome back, ${user?.name}. Here is an overview of your store.`}
+          icon="dashboard"
+          actions={
+            <Link to="/seller/products" className="btn btn-dark" id="dashboard-add-product-btn">
+              <IconPlus size={16} />
+              Add Product
+            </Link>
+          }
+        />
+
+        {/* KPI stats */}
+        <div className="sd-stats">
+          {stats.map((s, i) => {
+            const inner = (
+              <>
+                <span className="sd-stat-icon" style={{ background: s.tint }}>
+                  {s.icon}
+                </span>
+                <span className="sd-stat-body">
+                  <span className="sd-stat-label">{s.label}</span>
+                  <span className="sd-stat-value">{s.value}</span>
+                  {s.hint && (
+                    <span className="sd-stat-hint">
+                      {s.hint} <IconArrowRight size={12} />
+                    </span>
+                  )}
+                </span>
+              </>
+            );
+            return s.link ? (
+              <Link key={i} to={s.link} className="sd-stat card card-hover" style={{ textDecoration: 'none' }}>
+                {inner}
+              </Link>
+            ) : (
+              <div key={i} className="sd-stat card">
+                {inner}
+              </div>
+            );
+          })}
         </div>
 
-        {/* Stats */}
-        <div style={gridStyle}>
-          {stats.map((s, i) => (
-            <div key={i} style={statCardStyle}>
-              <div style={{ ...iconStyle, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{s.icon}</div>
-              <div>
-                <div style={{ color: '#6b7280', fontSize: '12px', fontWeight: '500' }}>{s.label}</div>
-                <div style={{ color: '#111827', fontSize: '22px', fontWeight: '700', marginTop: '2px' }}>{s.value}</div>
-              </div>
+        {/* Quick actions */}
+        <div className="card card-pad sd-section">
+          <h2 className="section-title">Quick Actions</h2>
+          <div className="sd-quick-grid">
+            <Link to="/seller/products" className="sd-quick card-hover sd-quick-em" id="ql-add-product">
+              <span className="sd-quick-icon" style={{ background: 'var(--brand-soft)', color: 'var(--brand-active)' }}>
+                <IconPlus size={20} strokeWidth={2.4} />
+              </span>
+              <span className="sd-quick-title">Add Product</span>
+              <span className="sd-quick-desc">List a new item for sale</span>
+            </Link>
+            <Link to="/seller/products" className="sd-quick card-hover" id="ql-my-listings">
+              <span className="sd-quick-icon">
+                <IconTag size={20} />
+              </span>
+              <span className="sd-quick-title">My Listings</span>
+              <span className="sd-quick-desc">Add or manage products</span>
+            </Link>
+            <Link to="/seller/orders" className="sd-quick card-hover" id="ql-orders">
+              <span className="sd-quick-icon">
+                <IconShoppingBag size={20} />
+              </span>
+              <span className="sd-quick-title">Orders</span>
+              <span className="sd-quick-desc">View incoming orders</span>
+            </Link>
+            <Link to="/seller/payouts" className="sd-quick card-hover" id="ql-payouts">
+              <span className="sd-quick-icon">
+                <IconWallet size={20} />
+              </span>
+              <span className="sd-quick-title">Earnings & UPI</span>
+              <span className="sd-quick-desc">UPI payouts & net sales</span>
+            </Link>
+          </div>
+        </div>
+
+        {/* Recent orders */}
+        <div className="card card-pad sd-section">
+          <div className="sd-sec-head">
+            <h2 className="section-title">Recent Orders</h2>
+            {!ordersLoading && orders.length > 0 && (
+              <Link to="/seller/orders" className="sd-viewall">
+                View all orders <IconArrowRight size={13} />
+              </Link>
+            )}
+          </div>
+          {ordersLoading ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <Skeleton w="60%" h={12} />
+              <Skeleton w="100%" h={40} r={8} />
+              <Skeleton w="100%" h={40} r={8} />
             </div>
-          ))}
-        </div>
-
-        {/* Quick links */}
-        <div style={quickLinksStyle}>
-          <h2 style={cardHeadingStyle}>Quick Actions</h2>
-          <div style={quickLinksGridStyle}>
-            <Link to="/seller/products" style={{ ...quickLinkCardStyle, borderColor: '#111827' }} id="ql-add-product">
-              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '4px' }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#111827" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="12" y1="5" x2="12" y2="19"/>
-                  <line x1="5" y1="12" x2="19" y2="12"/>
-                </svg>
-              </div>
-              <div style={{ fontWeight: '700', color: '#111827', marginTop: '8px' }}>Add Product</div>
-              <div style={{ color: '#9ca3af', fontSize: '12px', marginTop: '4px' }}>List a new item for sale</div>
-            </Link>
-            <Link to="/seller/products" style={quickLinkCardStyle} id="ql-my-listings">
-              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '4px' }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#111827" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
-                  <line x1="7" y1="7" x2="7.01" y2="7"/>
-                </svg>
-              </div>
-              <div style={{ fontWeight: '600', color: '#111827', marginTop: '8px' }}>My Listings</div>
-              <div style={{ color: '#9ca3af', fontSize: '12px', marginTop: '4px' }}>Add or manage products</div>
-            </Link>
-            <Link to="/seller/orders" style={quickLinkCardStyle} id="ql-orders">
-              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '4px' }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#111827" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
-                  <line x1="3" y1="6" x2="21" y2="6"/>
-                  <path d="M16 10a4 4 0 0 1-8 0"/>
-                </svg>
-              </div>
-              <div style={{ fontWeight: '600', color: '#111827', marginTop: '8px' }}>Orders</div>
-              <div style={{ color: '#9ca3af', fontSize: '12px', marginTop: '4px' }}>View incoming orders</div>
-            </Link>
-            <Link to="/seller/payouts" style={{ ...quickLinkCardStyle, borderColor: '#059669' }} id="ql-payouts">
-              <span style={{ fontSize: '28px' }}>💳</span>
-              <div style={{ fontWeight: '700', color: '#059669', marginTop: '8px' }}>Earnings & UPI</div>
-              <div style={{ color: '#9ca3af', fontSize: '12px', marginTop: '4px' }}>UPI payouts & net sales</div>
-            </Link>
-          </div>
+          ) : orders.length === 0 ? (
+            <EmptyState
+              compact
+              icon="shopping-bag"
+              title="No orders yet"
+              description="When buyers purchase your products, recent orders will show up here."
+            />
+          ) : (
+            <div className="table-wrap">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Order</th>
+                    <th>Buyer</th>
+                    <th>Items</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {orders.slice(0, 5).map((o) => {
+                    const badge = ORDER_BADGE[o.status] || { label: o.status, color: 'gray' as const };
+                    return (
+                      <tr key={o.id}>
+                        <td className="mono" style={{ fontWeight: 600, color: 'var(--text)' }}>
+                          #{o.id.slice(0, 8).toUpperCase()}
+                        </td>
+                        <td style={{ color: 'var(--text)' }}>{o.buyer_name}</td>
+                        <td>
+                          <span className="truncate-1" style={{ display: 'inline-block', maxWidth: 180 }}>
+                            {o.items?.length ? o.items[0].title : '—'}
+                            {o.items?.length > 1 ? ` +${o.items.length - 1} more` : ''}
+                          </span>
+                        </td>
+                        <td style={{ fontWeight: 700, color: 'var(--text)' }}>
+                          {formatPrice(Number(o.total_amount))}
+                        </td>
+                        <td>
+                          <Badge color={badge.color}>{badge.label}</Badge>
+                        </td>
+                        <td style={{ color: 'var(--text-muted)' }}>{formatDate(o.created_at)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* Recent listings */}
-        <div style={cardStyle}>
-          <h2 style={cardHeadingStyle}>Recent Listings</h2>
-          {isLoading && (
-            <p style={{ color: '#9ca3af', fontSize: '14px', margin: 0 }}>Loading...</p>
-          )}
-          {!isLoading && products.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '20px 0' }}>
-              <p style={{ color: '#9ca3af', fontSize: '14px', margin: '0 0 16px 0' }}>
-                No products listed yet. Start selling by adding your first product!
-              </p>
-              <Link to="/seller/products" style={addProductBtnStyle} id="dashboard-add-product-btn">
-                + Add Product
+        <div className="card card-pad sd-section">
+          <div className="sd-sec-head">
+            <h2 className="section-title">Recent Listings</h2>
+            {!isLoading && products.length > 5 && (
+              <Link to="/seller/products" className="sd-viewall">
+                View all {products.length} listings <IconArrowRight size={13} />
               </Link>
+            )}
+          </div>
+          {isLoading ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <Skeleton w="100%" h={48} r={10} />
+              <Skeleton w="100%" h={48} r={10} />
+              <Skeleton w="100%" h={48} r={10} />
             </div>
-          )}
-          {!isLoading && products.length > 0 && (
-            <div style={recentListStyle}>
+          ) : products.length === 0 ? (
+            <EmptyState
+              compact
+              icon="tag"
+              title="No products listed yet"
+              description="Start selling by adding your first product."
+              action={
+                <Link to="/seller/products" className="btn btn-primary" id="dashboard-add-product-empty">
+                  <IconPlus size={15} />
+                  Add Product
+                </Link>
+              }
+            />
+          ) : (
+            <div className="sd-recent-list">
               {products.slice(0, 5).map((p) => (
-                <div key={p.id} style={recentItemStyle}>
-                  <div style={recentThumbStyle}>
-                    {p.image_url
-                      ? <img src={p.image_url} alt={p.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      : <span style={{ fontSize: '20px' }}>📦</span>
-                    }
+                <div key={p.id} className="sd-recent-item">
+                  <div className="sd-recent-thumb">
+                    {p.image_url ? (
+                      <img src={p.image_url} alt={p.title} />
+                    ) : (
+                      <IconImage size={18} color="var(--text-faint)" />
+                    )}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: '600', color: '#111827', fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {p.title}
-                    </div>
-                    <div style={{ color: '#9ca3af', fontSize: '12px' }}>
-                      ₹{Number(p.price).toFixed(2)} · {p.stock} in stock
+                    <div className="sd-recent-title truncate-1">{p.title}</div>
+                    <div className="sd-recent-meta">
+                      {formatPrice(Number(p.price))} · {p.stock} in stock
                     </div>
                   </div>
-                  <span style={statusPillStyle(p.is_active !== false)}>
+                  <Badge color={p.is_active !== false ? 'green' : 'gray'}>
                     {p.is_active !== false ? 'Active' : 'Hidden'}
-                  </span>
+                  </Badge>
                 </div>
               ))}
-              {products.length > 5 && (
-                <Link to="/seller/products" style={{ display: 'block', textAlign: 'center', color: '#6b7280', fontSize: '13px', marginTop: '12px', textDecoration: 'none' }}>
-                  View all {products.length} listings →
-                </Link>
-              )}
             </div>
           )}
         </div>
       </div>
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-        #ql-my-listings:hover, #ql-orders:hover { border-color: #111827 !important; }
-        #dashboard-add-product-btn:hover { background-color: #374151 !important; }
+        .sdash { max-width: 1000px; margin: 0 auto; }
+        .sd-stats {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+          gap: 14px;
+          margin-bottom: 18px;
+        }
+        .sd-stat { display: flex; align-items: center; gap: 13px; padding: 16px 18px; }
+        .sd-stat-icon {
+          width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0;
+          display: inline-flex; align-items: center; justify-content: center;
+        }
+        .sd-stat-body { display: flex; flex-direction: column; min-width: 0; }
+        .sd-stat-label { font-size: 12px; font-weight: 500; color: var(--text-muted); }
+        .sd-stat-value { font-size: 22px; font-weight: 800; color: var(--text); letter-spacing: -0.01em; line-height: 1.2; }
+        .sd-stat-hint {
+          display: inline-flex; align-items: center; gap: 4px;
+          font-size: 11px; font-weight: 600; color: var(--brand); margin-top: 2px;
+        }
+        .sd-section { margin-bottom: 18px; }
+        .sd-sec-head {
+          display: flex; align-items: center; justify-content: space-between;
+          gap: 12px; margin-bottom: 14px;
+        }
+        .sd-viewall {
+          display: inline-flex; align-items: center; gap: 5px;
+          font-size: 13px; font-weight: 600; color: var(--brand); text-decoration: none;
+        }
+        .sd-viewall:hover { text-decoration: underline; }
+        .sd-quick-grid {
+          display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+          gap: 12px;
+        }
+        .sd-quick {
+          display: flex; flex-direction: column; align-items: center; text-align: center;
+          padding: 20px 14px; border-radius: var(--radius-md); text-decoration: none;
+          border: 1px solid var(--border); background: var(--surface);
+        }
+        .sd-quick-em { border-color: var(--brand-border); }
+        .sd-quick-icon {
+          width: 42px; height: 42px; border-radius: 12px;
+          background: var(--surface-muted); color: var(--text-secondary);
+          display: inline-flex; align-items: center; justify-content: center; margin-bottom: 10px;
+        }
+        .sd-quick-title { font-size: 14px; font-weight: 700; color: var(--text); }
+        .sd-quick-em .sd-quick-title { color: var(--brand-active); }
+        .sd-quick-desc { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+        .sd-recent-list { display: flex; flex-direction: column; }
+        .sd-recent-item {
+          display: flex; align-items: center; gap: 12px;
+          padding: 11px 0; border-bottom: 1px solid var(--surface-muted);
+        }
+        .sd-recent-item:last-child { border-bottom: none; }
+        .sd-recent-thumb {
+          width: 42px; height: 42px; border-radius: 10px; background: var(--surface-muted);
+          border: 1px solid var(--border); flex-shrink: 0; overflow: hidden;
+          display: flex; align-items: center; justify-content: center;
+        }
+        .sd-recent-thumb img { width: 100%; height: 100%; object-fit: cover; }
+        .sd-recent-title { font-size: 14px; font-weight: 600; color: var(--text); }
+        .sd-recent-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+        @media (max-width: 768px) {
+          .sd-stats { grid-template-columns: repeat(2, 1fr); }
+          .sd-quick-grid { grid-template-columns: repeat(2, 1fr); }
+          .sd-stat-value { font-size: 19px; }
+        }
+        @media (max-width: 560px) {
+          .sd-stats { grid-template-columns: 1fr; }
+          .sd-quick-grid { grid-template-columns: 1fr; }
+          .sd-sec-head { flex-direction: column; align-items: flex-start; gap: 6px; }
+        }
       `}</style>
     </AppLayout>
   );
 };
-
-const headingStyle: React.CSSProperties  = { color: '#111827', fontSize: '24px', fontWeight: '700', margin: '0 0 4px 0' };
-const subStyle: React.CSSProperties      = { color: '#6b7280', fontSize: '14px', margin: '0 0 24px 0' };
-const gridStyle: React.CSSProperties     = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '24px' };
-const statCardStyle: React.CSSProperties = { backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px', display: 'flex', alignItems: 'center', gap: '14px' };
-const iconStyle: React.CSSProperties     = { fontSize: '26px' };
-const cardStyle: React.CSSProperties     = { backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '24px', marginTop: '16px' };
-const cardHeadingStyle: React.CSSProperties = { color: '#111827', fontSize: '15px', fontWeight: '600', margin: '0 0 16px 0' };
-
-const quickLinksStyle: React.CSSProperties = { backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '24px', marginTop: '16px' };
-const quickLinksGridStyle: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px' };
-const quickLinkCardStyle: React.CSSProperties = {
-  display: 'block', padding: '20px', borderRadius: '10px', border: '1.5px solid #e5e7eb',
-  textDecoration: 'none', textAlign: 'center', transition: 'border-color 0.15s ease',
-};
-
-const addProductBtnStyle: React.CSSProperties = {
-  display: 'inline-block', padding: '10px 20px', borderRadius: '8px', backgroundColor: '#111827',
-  color: '#ffffff', fontSize: '13px', fontWeight: '600', textDecoration: 'none',
-  transition: 'background-color 0.15s ease',
-};
-
-const recentListStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '10px' };
-const recentItemStyle: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: '12px',
-  padding: '10px 0', borderBottom: '1px solid #f9fafb',
-};
-const recentThumbStyle: React.CSSProperties = {
-  width: '40px', height: '40px', borderRadius: '8px', backgroundColor: '#f3f4f6',
-  flexShrink: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center',
-};
-const statusPillStyle = (active: boolean): React.CSSProperties => ({
-  padding: '2px 10px', borderRadius: '10px', fontSize: '11px', fontWeight: '600',
-  backgroundColor: active ? '#f0fdf4' : '#f3f4f6',
-  color: active ? '#166534' : '#6b7280', flexShrink: 0,
-});
 
 export default SellerDashboardPage;

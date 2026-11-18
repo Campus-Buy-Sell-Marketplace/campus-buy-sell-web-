@@ -1,5 +1,7 @@
 // ============================================================
 // LAVSA — Seller Payouts & Earnings Page
+// Track sales earnings, manage UPI payout settings, view settlements.
+// Redesigned with the LAVSA design system (global.css + UI kit).
 // ============================================================
 
 import React, { useEffect, useState } from 'react';
@@ -14,6 +16,12 @@ import {
   SellerEarnings,
   SellerPayoutRecord,
 } from '../../services/sellerPayoutService';
+import { Button, Card, Badge, PageHeader, PageLoader } from '../../components/UI/ui';
+import {
+  IconArrowLeft,
+  IconAlertTriangle,
+} from '../../components/UI/Icons';
+import { formatPrice, formatDate } from '../../utils/format';
 
 const SellerPayoutsPage: React.FC = () => {
   const [profile, setProfile] = useState<SellerPayoutProfile | null>(null);
@@ -80,7 +88,6 @@ const SellerPayoutsPage: React.FC = () => {
       });
       setProfile(updated);
       setSaveSuccess('UPI payout details saved successfully! Future payouts will be sent to this ID.');
-      // Refresh payouts list to reflect updated UPI
       const refreshedPayouts = await getSellerPayouts();
       setPayouts(refreshedPayouts);
     } catch (err: any) {
@@ -92,81 +99,128 @@ const SellerPayoutsPage: React.FC = () => {
 
   return (
     <AppLayout>
-      <div style={{ maxWidth: '1000px', margin: '0 auto', fontFamily: "'Inter', system-ui, sans-serif" }}>
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <div>
-            <h1 style={headingStyle}>Earnings & Payouts</h1>
-            <p style={subStyle}>Track your sales earnings and manage your UPI payout settings</p>
-          </div>
-          <Link to="/seller/dashboard" style={secondaryLinkStyle}>
-            ← Back to Dashboard
-          </Link>
-        </div>
+      <div className="page seller-payouts-page" style={{ maxWidth: 1000, margin: '0 auto' }}>
+        <PageHeader
+          title="Earnings & Payouts"
+          subtitle="Track sales earnings and configure your campus UPI settlement destination"
+          icon="wallet"
+          actions={
+            <Link to="/seller/dashboard" className="btn btn-secondary btn-sm">
+              <IconArrowLeft size={14} /> Back to Hub
+            </Link>
+          }
+        />
 
         {/* Missing UPI Notice */}
         {!loading && (!profile || !profile.upi_id) && (
-          <div style={warningBannerStyle}>
-            <span style={{ fontSize: '20px' }}>⚠️</span>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              background: 'var(--warning-soft)',
+              border: '1px solid var(--warning-border)',
+              borderRadius: 'var(--radius-sm)',
+              padding: '14px 18px',
+              marginBottom: 20,
+              fontSize: 13,
+              color: 'var(--warning-strong)',
+            }}
+          >
+            <IconAlertTriangle size={20} color="var(--warning-strong)" style={{ flexShrink: 0 }} />
             <div>
               <strong>Action Required: Add your UPI ID below.</strong>
-              <div style={{ fontSize: '13px', marginTop: '2px', opacity: 0.9 }}>
-                When buyers complete orders with online payment, the campus admin will transfer your earnings to this UPI ID.
+              <div style={{ fontSize: 12, marginTop: 2, opacity: 0.9 }}>
+                When buyers pay online for your items, platform earnings will be transferred directly to this UPI address.
               </div>
             </div>
           </div>
         )}
 
-        {/* Earnings Stats Grid */}
-        <div style={gridStyle}>
-          <div style={statCardStyle}>
-            <div style={labelStyle}>Total Net Earnings</div>
-            <div style={{ ...valueStyle, color: '#059669' }}>
-              ₹{earnings ? earnings.totalNet.toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '0.00'}
+        {/* Earnings Stats Cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginBottom: 24 }}>
+          <Card padded>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              Total Net Earnings
             </div>
-            <div style={subLabelStyle}>After 2% platform fee</div>
-          </div>
+            <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--success-strong)', marginTop: 6 }}>
+              {formatPrice(earnings?.totalNet ?? 0)}
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+              After 2% platform transaction fee
+            </div>
+          </Card>
 
-          <div style={statCardStyle}>
-            <div style={labelStyle}>Pending Payout</div>
-            <div style={{ ...valueStyle, color: (earnings?.pendingPayout || 0) > 0 ? '#d97706' : '#111827' }}>
-              ₹{earnings ? earnings.pendingPayout.toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '0.00'}
+          <Card padded>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              Pending Payout
             </div>
-            <div style={subLabelStyle}>{earnings?.pendingCount || 0} order(s) awaiting transfer</div>
-          </div>
+            <div
+              style={{
+                fontSize: 26,
+                fontWeight: 800,
+                color: (earnings?.pendingPayout || 0) > 0 ? 'var(--warning-strong)' : 'var(--ink)',
+                marginTop: 6,
+              }}
+            >
+              {formatPrice(earnings?.pendingPayout ?? 0)}
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+              {earnings?.pendingCount || 0} order(s) awaiting transfer
+            </div>
+          </Card>
 
-          <div style={statCardStyle}>
-            <div style={labelStyle}>Paid Out to UPI</div>
-            <div style={{ ...valueStyle, color: '#2563eb' }}>
-              ₹{earnings ? earnings.completedPayout.toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '0.00'}
+          <Card padded>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              Settled Payouts
             </div>
-            <div style={subLabelStyle}>{earnings?.completedCount || 0} transfer(s) settled</div>
-          </div>
+            <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--brand)', marginTop: 6 }}>
+              {formatPrice(earnings?.completedPayout ?? 0)}
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+              {earnings?.completedCount || 0} transfer(s) settled
+            </div>
+          </Card>
 
-          <div style={statCardStyle}>
-            <div style={labelStyle}>Platform Fee (2%)</div>
-            <div style={{ ...valueStyle, color: '#6b7280' }}>
-              ₹{earnings ? earnings.totalCommission.toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '0.00'}
+          <Card padded>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              Platform Fee (2%)
             </div>
-            <div style={subLabelStyle}>Gateway & maintenance</div>
-          </div>
+            <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--text-secondary)', marginTop: 6 }}>
+              {formatPrice(earnings?.totalCommission ?? 0)}
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+              Escrow hosting &amp; gateway support
+            </div>
+          </Card>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px', marginBottom: '24px' }}>
-          {/* UPI Payout Settings Form */}
-          <div style={cardStyle}>
-            <h2 style={cardHeadingStyle}>💳 Your UPI Payout Settings</h2>
-            <p style={{ color: '#6b7280', fontSize: '13px', margin: '0 0 16px 0', lineHeight: '1.4' }}>
-              Provide your active UPI ID (Google Pay, PhonePe, Paytm, or BHIM). When a buyer verifies delivery OTP, your net earnings (98%) are scheduled for payout here.
+        {/* Two-Column Form & Explainer */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 24, marginBottom: 24 }}>
+          {/* UPI Settings Form */}
+          <Card padded>
+            <h2 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--ink)' }}>
+              Your UPI Payout Destination
+            </h2>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '0 0 16px 0', lineHeight: 1.5 }}>
+              Enter your active UPI ID (Google Pay, PhonePe, Paytm, or BHIM). Once you verify delivery with the buyer's OTP, net earnings (98%) are queued for settlement here.
             </p>
 
-            {saveSuccess && <div style={successAlertStyle}>{saveSuccess}</div>}
-            {saveError && <div style={errorAlertStyle}>{saveError}</div>}
+            {saveSuccess && (
+              <div style={{ background: 'var(--success-soft)', border: '1px solid var(--success-border)', color: 'var(--success-strong)', padding: '10px 14px', borderRadius: 'var(--radius-sm)', fontSize: 13, marginBottom: 14 }}>
+                ✓ {saveSuccess}
+              </div>
+            )}
+            {saveError && (
+              <div style={{ background: 'var(--danger-soft)', border: '1px solid var(--danger-border)', color: 'var(--danger-strong)', padding: '10px 14px', borderRadius: 'var(--radius-sm)', fontSize: 13, marginBottom: 14 }}>
+                ⚠️ {saveError}
+              </div>
+            )}
 
-            <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
-                <label style={formLabelStyle}>
-                  UPI ID (VPA) <span style={{ color: '#dc2626' }}>*</span>
+                <label className="label" style={{ marginBottom: 4 }}>
+                  UPI ID (VPA) <span style={{ color: 'var(--danger)' }}>*</span>
                 </label>
                 <input
                   type="text"
@@ -174,14 +228,14 @@ const SellerPayoutsPage: React.FC = () => {
                   placeholder="e.g. 9876543210@paytm or student@okhdfcbank"
                   value={upiId}
                   onChange={(e) => setUpiId(e.target.value)}
-                  style={inputStyle}
+                  className="input"
                   id="seller-upi-input"
                 />
               </div>
 
               <div>
-                <label style={formLabelStyle}>
-                  Account Holder Name <span style={{ color: '#dc2626' }}>*</span>
+                <label className="label" style={{ marginBottom: 4 }}>
+                  Account Holder Name <span style={{ color: 'var(--danger)' }}>*</span>
                 </label>
                 <input
                   type="text"
@@ -189,78 +243,85 @@ const SellerPayoutsPage: React.FC = () => {
                   placeholder="Full name as shown in banking app"
                   value={accountHolderName}
                   onChange={(e) => setAccountHolderName(e.target.value)}
-                  style={inputStyle}
+                  className="input"
                   id="seller-holder-name-input"
                 />
               </div>
 
               <div>
-                <label style={formLabelStyle}>Contact Phone Number (Optional)</label>
+                <label className="label" style={{ marginBottom: 4 }}>
+                  Contact Phone Number (Optional)
+                </label>
                 <input
                   type="tel"
                   placeholder="10-digit mobile number"
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
-                  style={inputStyle}
+                  className="input"
                 />
               </div>
 
-              <button
+              <Button
                 type="submit"
-                disabled={savingProfile}
-                style={primaryBtnStyle}
+                variant="primary"
+                loading={savingProfile}
                 id="save-payout-profile-btn"
               >
-                {savingProfile ? 'Saving...' : 'Save Payout Details'}
-              </button>
+                Save Payout Details
+              </Button>
             </form>
-          </div>
+          </Card>
 
-          {/* How Payouts Work Card */}
-          <div style={{ ...cardStyle, backgroundColor: '#f9fafb' }}>
-            <h2 style={cardHeadingStyle}>ℹ️ How Payouts Work</h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13px', color: '#4b5563', lineHeight: '1.5' }}>
+          {/* How Payouts Work */}
+          <Card padded style={{ background: 'var(--surface-soft)' }}>
+            <h2 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 14px 0', color: 'var(--ink)' }}>
+              How Campus Payouts Work
+            </h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
               <div>
-                <strong>1. Buyer Pays Online:</strong> When a buyer pays via Razorpay, funds are held securely in platform escrow.
+                <strong style={{ color: 'var(--ink)' }}>1. Buyer Pays Online:</strong> When a buyer pays via Razorpay, funds are held securely in platform escrow.
               </div>
               <div>
-                <strong>2. Physical Meetup & OTP Verification:</strong> You and the buyer meet on campus. Once you verify their 6-digit delivery OTP, the order is completed.
+                <strong style={{ color: 'var(--ink)' }}>2. Physical Meetup &amp; OTP Verification:</strong> You and the buyer meet on campus. Once you enter their 6-digit delivery OTP, the order completes.
               </div>
               <div>
-                <strong>3. Automatic Net Calculation:</strong> A 2% platform transaction fee is deducted, and 98% is immediately queued for transfer to your UPI ID.
+                <strong style={{ color: 'var(--ink)' }}>3. Automatic Net Calculation:</strong> A 2% platform fee is deducted, and 98% is immediately queued for transfer to your UPI ID.
               </div>
               <div>
-                <strong>4. Direct UPI Transfer:</strong> The campus administrator transfers the net amount directly to your Google Pay/PhonePe/Paytm and logs the UTR reference number.
+                <strong style={{ color: 'var(--ink)' }}>4. Direct UPI Transfer:</strong> The campus administrator transfers the net amount to your UPI and records the UTR reference number.
               </div>
             </div>
-          </div>
+          </Card>
         </div>
 
         {/* Payout History Table */}
-        <div style={cardStyle}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h2 style={cardHeadingStyle}>📋 Payout History</h2>
-            <span style={{ fontSize: '12px', color: '#6b7280' }}>
+        <Card padded>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: 'var(--ink)' }}>
+              Payout History
+            </h2>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
               {payouts.length} total payout record(s)
             </span>
           </div>
 
           {loading ? (
-            <p style={{ color: '#6b7280', fontSize: '14px' }}>Loading payout records...</p>
+            <PageLoader label="Loading payout records..." />
           ) : payouts.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '32px 0', color: '#9ca3af' }}>
-              <span style={{ fontSize: '32px' }}>💸</span>
-              <p style={{ margin: '8px 0 0 0', fontSize: '14px' }}>No completed orders with online payments yet.</p>
-              <p style={{ margin: '4px 0 0 0', fontSize: '12px' }}>Once buyers pay online and you verify OTP delivery, payouts will appear here.</p>
+            <div style={{ textAlign: 'center', padding: '36px 0', color: 'var(--text-muted)' }}>
+              <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--ink)' }}>No online payout records yet</div>
+              <p style={{ margin: '4px 0 0', fontSize: 12 }}>
+                Once buyers purchase with online payment and you confirm OTP delivery, records will appear here.
+              </p>
             </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13 }}>
                 <thead>
-                  <tr style={{ borderBottom: '2px solid #f3f4f6', color: '#6b7280' }}>
+                  <tr style={{ borderBottom: '2px solid var(--border)', color: 'var(--text-muted)' }}>
                     <th style={{ padding: '10px 8px' }}>Date</th>
                     <th style={{ padding: '10px 8px' }}>Order ID</th>
-                    <th style={{ padding: '10px 8px' }}>Sale Gross</th>
+                    <th style={{ padding: '10px 8px' }}>Gross</th>
                     <th style={{ padding: '10px 8px' }}>Fee (2%)</th>
                     <th style={{ padding: '10px 8px' }}>Net Payout</th>
                     <th style={{ padding: '10px 8px' }}>UPI ID</th>
@@ -270,45 +331,45 @@ const SellerPayoutsPage: React.FC = () => {
                 </thead>
                 <tbody>
                   {payouts.map((p) => (
-                    <tr key={p.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                      <td style={{ padding: '12px 8px', color: '#6b7280' }}>
-                        {new Date(p.created_at).toLocaleDateString()}
+                    <tr key={p.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                      <td style={{ padding: '12px 8px', color: 'var(--text-muted)' }}>
+                        {formatDate(p.created_at)}
                       </td>
-                      <td style={{ padding: '12px 8px', fontFamily: 'monospace', color: '#111827' }}>
-                        #{p.order_id.slice(0, 8)}
+                      <td style={{ padding: '12px 8px', fontFamily: 'monospace', color: 'var(--ink)' }}>
+                        #{p.order_id.slice(0, 8).toUpperCase()}
                       </td>
-                      <td style={{ padding: '12px 8px', fontWeight: '500' }}>
-                        ₹{Number(p.order_amount).toFixed(2)}
+                      <td style={{ padding: '12px 8px', fontWeight: 500 }}>
+                        {formatPrice(Number(p.order_amount))}
                       </td>
-                      <td style={{ padding: '12px 8px', color: '#ef4444' }}>
-                        -₹{Number(p.commission_amount).toFixed(2)}
+                      <td style={{ padding: '12px 8px', color: 'var(--danger)' }}>
+                        -{formatPrice(Number(p.commission_amount))}
                       </td>
-                      <td style={{ padding: '12px 8px', fontWeight: '700', color: '#059669' }}>
-                        ₹{Number(p.net_payout_amount).toFixed(2)}
+                      <td style={{ padding: '12px 8px', fontWeight: 700, color: 'var(--success-strong)' }}>
+                        {formatPrice(Number(p.net_payout_amount))}
                       </td>
                       <td style={{ padding: '12px 8px', fontFamily: 'monospace' }}>
                         {p.seller_upi_id === 'NOT_SET' ? (
-                          <span style={{ color: '#d97706', fontWeight: '600' }}>⚠️ Not Set</span>
+                          <Badge color="amber">Not Set</Badge>
                         ) : (
                           p.seller_upi_id
                         )}
                       </td>
                       <td style={{ padding: '12px 8px' }}>
                         {p.status === 'PAID' ? (
-                          <span style={paidBadgeStyle}>✓ Paid</span>
+                          <Badge color="green" icon="check">Paid</Badge>
                         ) : p.status === 'PENDING' ? (
-                          <span style={pendingBadgeStyle}>⏳ Pending</span>
+                          <Badge color="amber" icon="clock">Pending</Badge>
                         ) : (
-                          <span style={{ color: '#6b7280' }}>{p.status}</span>
+                          <Badge color="gray">{p.status}</Badge>
                         )}
                       </td>
-                      <td style={{ padding: '12px 8px', color: '#374151' }}>
+                      <td style={{ padding: '12px 8px', color: 'var(--text-secondary)' }}>
                         {p.transaction_reference ? (
-                          <span style={{ fontFamily: 'monospace', fontSize: '12px', background: '#f3f4f6', padding: '2px 6px', borderRadius: '4px' }}>
+                          <span style={{ fontFamily: 'monospace', fontSize: 12, background: 'var(--surface-muted)', padding: '2px 6px', borderRadius: 4 }}>
                             {p.transaction_reference}
                           </span>
                         ) : (
-                          <span style={{ color: '#9ca3af' }}>Awaiting transfer</span>
+                          <span style={{ color: 'var(--text-faint)' }}>Awaiting transfer</span>
                         )}
                       </td>
                     </tr>
@@ -317,30 +378,10 @@ const SellerPayoutsPage: React.FC = () => {
               </table>
             </div>
           )}
-        </div>
+        </Card>
       </div>
     </AppLayout>
   );
 };
-
-// Styles
-const headingStyle: React.CSSProperties = { color: '#111827', fontSize: '24px', fontWeight: '800', margin: '0 0 4px 0', letterSpacing: '-0.02em' };
-const subStyle: React.CSSProperties     = { color: '#6b7280', fontSize: '14px', margin: '0' };
-const secondaryLinkStyle: React.CSSProperties = { color: '#374151', textDecoration: 'none', fontSize: '13px', fontWeight: '600', padding: '8px 14px', border: '1px solid #d1d5db', borderRadius: '8px', background: '#fff' };
-const gridStyle: React.CSSProperties    = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '16px', marginBottom: '24px' };
-const statCardStyle: React.CSSProperties = { backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' };
-const labelStyle: React.CSSProperties   = { color: '#6b7280', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' };
-const valueStyle: React.CSSProperties   = { fontSize: '26px', fontWeight: '800', marginTop: '6px' };
-const subLabelStyle: React.CSSProperties = { color: '#9ca3af', fontSize: '11px', marginTop: '4px' };
-const cardStyle: React.CSSProperties    = { backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '24px' };
-const cardHeadingStyle: React.CSSProperties = { color: '#111827', fontSize: '16px', fontWeight: '700', margin: '0 0 8px 0' };
-const formLabelStyle: React.CSSProperties = { display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' };
-const inputStyle: React.CSSProperties   = { width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' };
-const primaryBtnStyle: React.CSSProperties = { padding: '12px 18px', backgroundColor: '#111827', color: '#ffffff', borderRadius: '8px', border: 'none', fontSize: '14px', fontWeight: '600', cursor: 'pointer', marginTop: '4px' };
-const warningBannerStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: '12px', backgroundColor: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', padding: '14px 18px', borderRadius: '10px', marginBottom: '20px', fontSize: '14px' };
-const successAlertStyle: React.CSSProperties = { backgroundColor: '#ecfdf5', border: '1px solid #a7f3d0', color: '#065f46', padding: '10px 14px', borderRadius: '8px', fontSize: '13px', marginBottom: '12px' };
-const errorAlertStyle: React.CSSProperties = { backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', padding: '10px 14px', borderRadius: '8px', fontSize: '13px', marginBottom: '12px' };
-const paidBadgeStyle: React.CSSProperties = { backgroundColor: '#dcfce7', color: '#166534', padding: '4px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700' };
-const pendingBadgeStyle: React.CSSProperties = { backgroundColor: '#fef3c7', color: '#92400e', padding: '4px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700' };
 
 export default SellerPayoutsPage;

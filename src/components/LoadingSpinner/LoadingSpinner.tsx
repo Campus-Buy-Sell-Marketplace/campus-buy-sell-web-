@@ -46,8 +46,8 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
 const spinnerStyle: React.CSSProperties = {
   width: '36px',
   height: '36px',
-  border: '3px solid #e5e7eb',
-  borderTop: '3px solid #111827',
+  border: '3px solid var(--border, #e5e7eb)',
+  borderTop: '3px solid var(--brand, #4f46e5)',
   borderRadius: '50%',
   animation: 'unitrade-spin 0.75s linear infinite',
 };

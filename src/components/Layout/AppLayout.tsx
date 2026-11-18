@@ -1,5 +1,7 @@
 // ============================================================
-// LAVSA — App Layout (Authenticated Shell) — Clean Professional
+// LAVSA — App Layout (Authenticated Shell)
+// Sticky navbar with brand mark, role-aware nav, cart bubble,
+// user dropdown and responsive mobile menu.
 // ============================================================
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -8,9 +10,62 @@ import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { APP_NAME } from '../../config/appConfig';
 import Footer from '../Footer/Footer';
+import {
+  IconHome,
+  IconHeart,
+  IconShoppingBag,
+  IconCart,
+  IconStore,
+  IconLayoutDashboard,
+  IconUsers,
+  IconGrid,
+  IconShield,
+  IconUser,
+  IconSettings,
+  IconLogOut,
+  IconChevronDown,
+  IconX,
+} from '../UI/Icons';
+import type { IconProps } from '../UI/Icons';
 
 interface AppLayoutProps {
   children: React.ReactNode;
+}
+
+type NavItem = { to: string; label: string; icon: React.FC<IconProps> };
+
+function buildNavLinks(role: string | null, isSeller: boolean): NavItem[] {
+  const buyer: NavItem[] = [
+    { to: '/home', label: 'Home', icon: IconHome },
+    { to: '/wishlist', label: 'Wishlist', icon: IconHeart },
+    { to: '/orders', label: 'My Orders', icon: IconShoppingBag },
+  ];
+  const seller: NavItem[] = [
+    { to: '/seller/dashboard', label: 'Seller Hub', icon: IconLayoutDashboard },
+    { to: '/seller/products', label: 'My Listings', icon: IconStore },
+    { to: '/seller/orders', label: 'Seller Orders', icon: IconShoppingBag },
+  ];
+  const admin: NavItem[] = [
+    { to: '/admin/dashboard', label: 'Dashboard', icon: IconLayoutDashboard },
+    { to: '/admin/users', label: 'Users', icon: IconUsers },
+    { to: '/admin/listings', label: 'Listings', icon: IconGrid },
+  ];
+  const superAdmin: NavItem[] = [
+    { to: '/super-admin/dashboard', label: 'SA Dashboard', icon: IconShield },
+    { to: '/super-admin/admins', label: 'Admins', icon: IconUsers },
+  ];
+
+  if (role === 'SUPER_ADMIN') return [...superAdmin, ...admin, ...buyer];
+  if (role === 'ADMIN') return [...admin, ...buyer];
+  if (isSeller) return [...buyer, ...seller];
+  return buyer;
+}
+
+function getRoleLabel(role: string | null, isSeller: boolean): string {
+  if (role === 'SUPER_ADMIN') return 'Super Admin';
+  if (role === 'ADMIN') return 'Admin';
+  if (isSeller) return 'Buyer · Seller';
+  return 'Buyer';
 }
 
 const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
@@ -38,27 +93,34 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   }, []);
 
   const navLinks = buildNavLinks(role, isSeller);
+  const initials = user?.name?.charAt(0).toUpperCase() ?? 'U';
 
   return (
     <div style={outerStyle}>
       {/* ── Top Navbar ── */}
       <header style={navbarStyle}>
         <div style={innerStyle}>
-          {/* Logo */}
-          <NavLink to="/home" style={logoStyle}>
+          {/* Brand */}
+          <NavLink to="/home" style={logoStyle} aria-label={`${APP_NAME} home`}>
+            <span style={logoMarkStyle}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                <polyline points="9 22 9 12 15 12 15 22" />
+              </svg>
+            </span>
             <span style={logoTextStyle}>{APP_NAME}</span>
-            <span style={logoDotStyle}>.</span>
           </NavLink>
 
           {/* Desktop Nav Links */}
-          <nav id="desktop-nav" style={desktopNavStyle}>
+          <nav id="desktop-nav" style={desktopNavStyle} aria-label="Main navigation">
             {navLinks.map((link) => (
               <NavLink
                 key={link.to}
                 to={link.to}
-                style={({ isActive }) => navLinkStyle(isActive)}
+                className={({ isActive }) => `nav-pill ${isActive ? 'nav-pill-active' : ''}`}
                 onClick={() => setMenuOpen(false)}
               >
+                <link.icon size={14} strokeWidth={2.2} />
                 {link.label}
                 {link.to === '/cart' && totalCount > 0 && (
                   <span style={cartBadgeStyle}>{totalCount > 99 ? '99+' : totalCount}</span>
@@ -70,14 +132,14 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           {/* Right: Cart + User Avatar + Hamburger */}
           <div style={rightStyle}>
             {/* Cart shortcut (desktop) */}
-            <NavLink to="/cart" style={({ isActive }) => cartIconLinkStyle(isActive)} id="nav-cart-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
-                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
-              </svg>
-              {totalCount > 0 && (
-                <span style={cartBubbleStyle}>{totalCount > 99 ? '99+' : totalCount}</span>
-              )}
+            <NavLink
+              to="/cart"
+              className="nav-icon-btn"
+              id="nav-cart-icon"
+              aria-label={`Cart${totalCount > 0 ? ` (${totalCount} items)` : ''}`}
+            >
+              <IconCart size={17} strokeWidth={2} />
+              {totalCount > 0 && <span style={cartBubbleStyle}>{totalCount > 99 ? '99+' : totalCount}</span>}
             </NavLink>
 
             {/* User dropdown */}
@@ -87,35 +149,36 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 onClick={() => setDropdownOpen((p) => !p)}
                 id="user-avatar-btn"
                 aria-expanded={dropdownOpen}
+                aria-haspopup="menu"
               >
-                <span style={avatarCircleStyle}>{user?.name?.charAt(0).toUpperCase() ?? 'U'}</span>
-                <span style={userNameStyle}>{user?.name?.split(' ')[0]}</span>
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="6 9 12 15 18 9"/>
-                </svg>
+                <span style={avatarCircleStyle}>{initials}</span>
+                <span style={userNameStyle} className="user-name-text">{user?.name?.split(' ')[0]}</span>
+                <span style={{ display: 'flex', transform: dropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.18s ease' }}>
+                  <IconChevronDown size={11} color="var(--text-faint)" strokeWidth={2.4} />
+                </span>
               </button>
 
               {dropdownOpen && (
-                <div style={dropdownStyle}>
+                <div style={dropdownStyle} className="slide-up" role="menu">
                   <div style={dropdownHeaderStyle}>
-                    <div style={dropdownAvatarStyle}>{user?.name?.charAt(0).toUpperCase() ?? 'U'}</div>
-                    <div>
+                    <div style={dropdownAvatarStyle}>{initials}</div>
+                    <div style={{ minWidth: 0 }}>
                       <div style={dropdownNameStyle}>{user?.name}</div>
                       <div style={dropdownRoleStyle}>{getRoleLabel(role, isSeller)}</div>
                     </div>
                   </div>
                   <div style={dropdownDividerStyle} />
-                  <NavLink to="/profile" style={dropdownItemStyle} onClick={() => setDropdownOpen(false)} id="dd-profile">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  <NavLink to="/profile" style={dropdownItemStyle} className="dd-item" onClick={() => setDropdownOpen(false)} id="dd-profile" role="menuitem">
+                    <IconUser size={14} />
                     Profile
                   </NavLink>
-                  <NavLink to="/settings" style={dropdownItemStyle} onClick={() => setDropdownOpen(false)} id="dd-settings">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+                  <NavLink to="/settings" style={dropdownItemStyle} className="dd-item" onClick={() => setDropdownOpen(false)} id="dd-settings" role="menuitem">
+                    <IconSettings size={14} />
                     Settings
                   </NavLink>
                   <div style={dropdownDividerStyle} />
-                  <button style={dropdownLogoutStyle} onClick={handleLogout} id="dd-logout">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                  <button style={dropdownLogoutStyle} className="dd-item" onClick={handleLogout} id="dd-logout" role="menuitem">
+                    <IconLogOut size={14} />
                     Log out
                   </button>
                 </div>
@@ -124,36 +187,44 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
             {/* Hamburger (mobile) */}
             <button
-              style={hamburgerStyle}
+              style={{ ...hamburgerStyle, color: menuOpen ? 'var(--text)' : 'var(--text-secondary)' }}
               onClick={() => setMenuOpen((p) => !p)}
               id="hamburger-btn"
               aria-label="Toggle menu"
+              aria-expanded={menuOpen}
             >
-              {menuOpen ? '✕' : '☰'}
+              {menuOpen ? <IconX size={17} /> : <IconMenuSvg />}
             </button>
           </div>
         </div>
 
         {/* Mobile dropdown menu */}
         {menuOpen && (
-          <nav id="mobile-nav" style={mobileNavStyle}>
+          <nav id="mobile-nav" style={mobileNavStyle} className="slide-up" aria-label="Mobile navigation">
             {navLinks.map((link) => (
               <NavLink
                 key={link.to}
                 to={link.to}
-                style={({ isActive }) => mobileLinkStyle(isActive)}
+                className={({ isActive }) => `mobile-link ${isActive ? 'mobile-link-active' : ''}`}
                 onClick={() => setMenuOpen(false)}
               >
+                <link.icon size={16} strokeWidth={2.1} />
                 {link.label}
+                {link.to === '/cart' && totalCount > 0 && (
+                  <span style={cartBadgeStyle}>{totalCount > 99 ? '99+' : totalCount}</span>
+                )}
               </NavLink>
             ))}
-            <NavLink to="/profile" style={({ isActive }) => mobileLinkStyle(isActive)} onClick={() => setMenuOpen(false)}>
+            <NavLink to="/profile" className={({ isActive }) => `mobile-link ${isActive ? 'mobile-link-active' : ''}`} onClick={() => setMenuOpen(false)}>
+              <IconUser size={16} strokeWidth={2.1} />
               Profile
             </NavLink>
-            <NavLink to="/settings" style={({ isActive }) => mobileLinkStyle(isActive)} onClick={() => setMenuOpen(false)}>
+            <NavLink to="/settings" className={({ isActive }) => `mobile-link ${isActive ? 'mobile-link-active' : ''}`} onClick={() => setMenuOpen(false)}>
+              <IconSettings size={16} strokeWidth={2.1} />
               Settings
             </NavLink>
             <button style={mobileLogoutStyle} onClick={handleLogout} id="mobile-logout-btn">
+              <IconLogOut size={16} />
               Log out
             </button>
           </nav>
@@ -167,17 +238,15 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       <Footer />
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-        #user-avatar-btn:hover { background-color: #f3f4f6 !important; }
-        #nav-cart-icon { color: #6b7280; }
-        #nav-cart-icon:hover { color: #111827; background-color: #f3f4f6 !important; }
-        #dd-profile:hover, #dd-settings:hover { background-color: #f9fafb !important; color: #111827 !important; }
-        #dd-logout:hover { background-color: #fef2f2 !important; color: #dc2626 !important; }
-        #mobile-logout-btn:hover { background-color: #fef2f2 !important; color: #dc2626 !important; }
+        #user-avatar-btn:hover { background-color: var(--surface-muted) !important; }
+        #dd-profile:hover, #dd-settings:hover { background-color: var(--surface-soft) !important; color: var(--text) !important; }
+        #dd-logout:hover { background-color: var(--danger-soft) !important; color: var(--danger-strong) !important; }
+        #mobile-logout-btn:hover { background-color: var(--danger-soft) !important; color: var(--danger-strong) !important; border-color: var(--danger-border) !important; }
         @media (max-width: 768px) {
           #desktop-nav { display: none !important; }
           #hamburger-btn { display: flex !important; }
           #nav-cart-icon { display: none !important; }
+          #user-avatar-btn .user-name-text { display: none !important; }
         }
         @media (min-width: 769px) {
           #hamburger-btn { display: none !important; }
@@ -188,42 +257,13 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   );
 };
 
-// ── Nav link builder ──────────────────────────────────────────────────────
-type NavItem = { to: string; label: string; icon?: string };
-
-function buildNavLinks(role: string | null, isSeller: boolean): NavItem[] {
-  const buyer: NavItem[] = [
-    { to: '/home',     label: 'Home' },
-    { to: '/wishlist', label: 'Wishlist' },
-    { to: '/orders',   label: 'My Orders' },
-  ];
-  const seller: NavItem[] = [
-    { to: '/seller/dashboard', label: 'Dashboard' },
-    { to: '/seller/products',  label: 'My Listings' },
-    { to: '/seller/orders',    label: 'Orders' },
-  ];
-  const admin: NavItem[] = [
-    { to: '/admin/dashboard', label: 'Dashboard' },
-    { to: '/admin/users',     label: 'Users' },
-    { to: '/admin/listings',  label: 'Listings' },
-  ];
-  const superAdmin: NavItem[] = [
-    { to: '/super-admin/dashboard', label: 'SA Dashboard' },
-    { to: '/super-admin/admins',    label: 'Admins' },
-  ];
-
-  if (role === 'SUPER_ADMIN') return [...superAdmin, ...admin, ...buyer];
-  if (role === 'ADMIN')       return [...admin, ...buyer];
-  if (isSeller)               return [...buyer, ...seller];
-  return buyer;
-}
-
-function getRoleLabel(role: string | null, isSeller: boolean): string {
-  if (role === 'SUPER_ADMIN') return 'Super Admin';
-  if (role === 'ADMIN')       return 'Admin';
-  if (isSeller)               return 'Buyer · Seller';
-  return 'Buyer';
-}
+const IconMenuSvg: React.FC = () => (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <line x1="3" y1="12" x2="21" y2="12" />
+    <line x1="3" y1="6" x2="21" y2="6" />
+    <line x1="3" y1="18" x2="21" y2="18" />
+  </svg>
+);
 
 // ── Styles ────────────────────────────────────────────────────────────────
 
@@ -231,16 +271,18 @@ const outerStyle: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   minHeight: '100vh',
-  backgroundColor: '#f9fafb',
-  fontFamily: "'Inter', system-ui, sans-serif",
+  backgroundColor: 'var(--page-bg)',
+  fontFamily: 'var(--font)',
 };
 
 const navbarStyle: React.CSSProperties = {
   position: 'sticky',
   top: 0,
   zIndex: 100,
-  backgroundColor: '#ffffff',
-  borderBottom: '1px solid #e5e7eb',
+  backgroundColor: 'rgba(255, 255, 255, 0.88)',
+  backdropFilter: 'blur(12px)',
+  WebkitBackdropFilter: 'blur(12px)',
+  borderBottom: '1px solid var(--border)',
 };
 
 const innerStyle: React.CSSProperties = {
@@ -250,102 +292,85 @@ const innerStyle: React.CSSProperties = {
   height: '60px',
   display: 'flex',
   alignItems: 'center',
-  gap: '24px',
+  gap: '20px',
 };
 
 const logoStyle: React.CSSProperties = {
   display: 'flex',
-  alignItems: 'baseline',
+  alignItems: 'center',
+  gap: '8px',
   textDecoration: 'none',
   flexShrink: 0,
 };
 
-const logoTextStyle: React.CSSProperties = {
-  fontSize: '18px',
-  fontWeight: '800',
-  letterSpacing: '-0.01em',
-  color: '#111827',
+const logoMarkStyle: React.CSSProperties = {
+  width: 27,
+  height: 27,
+  borderRadius: 8,
+  background: 'var(--brand-gradient)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  boxShadow: 'var(--shadow-brand)',
+  flexShrink: 0,
 };
 
-const logoDotStyle: React.CSSProperties = {
-  color: '#111827',
-  fontSize: '22px',
-  fontWeight: '900',
-  lineHeight: 1,
+const logoTextStyle: React.CSSProperties = {
+  fontSize: '17px',
+  fontWeight: 800,
+  letterSpacing: '0.02em',
+  color: 'var(--text)',
 };
 
 const desktopNavStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
-  gap: '2px',
+  gap: '4px',
   flex: 1,
+  minWidth: 0,
+  overflowX: 'auto',
+  scrollbarWidth: 'none',
 };
-
-const navLinkStyle = (isActive: boolean): React.CSSProperties => ({
-  display: 'flex',
-  alignItems: 'center',
-  gap: '6px',
-  padding: '6px 12px',
-  borderRadius: '7px',
-  textDecoration: 'none',
-  fontSize: '13px',
-  fontWeight: isActive ? '600' : '500',
-  color: isActive ? '#111827' : '#6b7280',
-  backgroundColor: isActive ? '#f3f4f6' : 'transparent',
-  transition: 'all 0.15s ease',
-  whiteSpace: 'nowrap',
-});
 
 const rightStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
-  gap: '4px',
+  gap: '6px',
   marginLeft: 'auto',
   flexShrink: 0,
 };
 
-const cartIconLinkStyle = (isActive: boolean): React.CSSProperties => ({
-  position: 'relative',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  width: '36px',
-  height: '36px',
-  borderRadius: '7px',
-  textDecoration: 'none',
-  backgroundColor: isActive ? '#f3f4f6' : 'transparent',
-  transition: 'all 0.15s ease',
-});
-
-const cartBubbleStyle: React.CSSProperties = {
-  position: 'absolute',
-  top: '4px',
-  right: '4px',
-  backgroundColor: '#111827',
-  color: '#ffffff',
-  fontSize: '8px',
-  fontWeight: '700',
-  borderRadius: '50%',
-  width: '13px',
-  height: '13px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-};
-
 const cartBadgeStyle: React.CSSProperties = {
-  marginLeft: '4px',
+  marginLeft: '2px',
   minWidth: '16px',
   height: '16px',
   borderRadius: '8px',
-  backgroundColor: '#111827',
+  backgroundColor: 'var(--brand)',
   color: '#ffffff',
   fontSize: '9px',
-  fontWeight: '700',
+  fontWeight: 700,
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
   padding: '0 4px',
+};
+
+const cartBubbleStyle: React.CSSProperties = {
+  position: 'absolute',
+  top: '2px',
+  right: '2px',
+  backgroundColor: 'var(--brand)',
+  color: '#ffffff',
+  fontSize: '8px',
+  fontWeight: 700,
+  borderRadius: '50%',
+  minWidth: '13px',
+  height: '13px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '0 2px',
+  border: '1.5px solid #fff',
 };
 
 const avatarBtnStyle: React.CSSProperties = {
@@ -353,11 +378,11 @@ const avatarBtnStyle: React.CSSProperties = {
   alignItems: 'center',
   gap: '7px',
   padding: '5px 10px',
-  borderRadius: '7px',
+  borderRadius: 'var(--radius-full)',
   border: 'none',
   backgroundColor: 'transparent',
   cursor: 'pointer',
-  fontFamily: "'Inter', system-ui, sans-serif",
+  fontFamily: 'var(--font)',
   transition: 'background-color 0.15s ease',
 };
 
@@ -365,31 +390,31 @@ const avatarCircleStyle: React.CSSProperties = {
   width: '27px',
   height: '27px',
   borderRadius: '50%',
-  backgroundColor: '#111827',
+  background: 'var(--brand-gradient)',
   color: '#ffffff',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
   fontSize: '11px',
-  fontWeight: '700',
+  fontWeight: 700,
   flexShrink: 0,
 };
 
 const userNameStyle: React.CSSProperties = {
   fontSize: '13px',
-  fontWeight: '600',
-  color: '#111827',
+  fontWeight: 600,
+  color: 'var(--text)',
 };
 
 const dropdownStyle: React.CSSProperties = {
   position: 'absolute',
   top: 'calc(100% + 8px)',
   right: 0,
-  width: '210px',
-  backgroundColor: '#ffffff',
-  border: '1px solid #e5e7eb',
-  borderRadius: '10px',
-  boxShadow: '0 8px 30px rgba(0,0,0,0.10)',
+  width: '224px',
+  backgroundColor: 'var(--surface)',
+  border: '1px solid var(--border)',
+  borderRadius: 'var(--radius-md)',
+  boxShadow: 'var(--shadow-lg)',
   overflow: 'hidden',
   zIndex: 200,
 };
@@ -399,26 +424,27 @@ const dropdownHeaderStyle: React.CSSProperties = {
   alignItems: 'center',
   gap: '10px',
   padding: '14px 16px',
+  backgroundColor: 'var(--surface-soft)',
 };
 
 const dropdownAvatarStyle: React.CSSProperties = {
-  width: '32px',
-  height: '32px',
+  width: '34px',
+  height: '34px',
   borderRadius: '50%',
-  backgroundColor: '#111827',
+  background: 'var(--brand-gradient)',
   color: '#ffffff',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  fontSize: '12px',
-  fontWeight: '700',
+  fontSize: '13px',
+  fontWeight: 700,
   flexShrink: 0,
 };
 
 const dropdownNameStyle: React.CSSProperties = {
   fontSize: '13px',
-  fontWeight: '600',
-  color: '#111827',
+  fontWeight: 600,
+  color: 'var(--text)',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
@@ -426,39 +452,36 @@ const dropdownNameStyle: React.CSSProperties = {
 
 const dropdownRoleStyle: React.CSSProperties = {
   fontSize: '11px',
-  color: '#9ca3af',
+  color: 'var(--text-faint)',
   marginTop: '1px',
 };
 
 const dropdownDividerStyle: React.CSSProperties = {
   height: '1px',
-  backgroundColor: '#f3f4f6',
+  backgroundColor: 'var(--border)',
 };
 
 const dropdownItemStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '9px',
-  padding: '9px 16px',
-  fontSize: '13px',
-  color: '#374151',
-  textDecoration: 'none',
-  transition: 'background-color 0.1s ease',
-};
-
-const dropdownLogoutStyle: React.CSSProperties = {
   width: '100%',
   display: 'flex',
   alignItems: 'center',
   gap: '9px',
-  padding: '9px 16px',
+  padding: '10px 16px',
   fontSize: '13px',
-  color: '#374151',
+  fontWeight: 500,
+  color: 'var(--text-secondary)',
+  textDecoration: 'none',
   background: 'none',
   border: 'none',
   cursor: 'pointer',
-  fontFamily: "'Inter', system-ui, sans-serif",
+  fontFamily: 'var(--font)',
+  textAlign: 'left',
   transition: 'background-color 0.1s ease',
+};
+
+const dropdownLogoutStyle: React.CSSProperties = {
+  ...dropdownItemStyle,
+  color: 'var(--text-secondary)',
 };
 
 const hamburgerStyle: React.CSSProperties = {
@@ -467,13 +490,10 @@ const hamburgerStyle: React.CSSProperties = {
   justifyContent: 'center',
   width: '34px',
   height: '34px',
-  borderRadius: '7px',
-  border: '1px solid #e5e7eb',
+  borderRadius: 'var(--radius-sm)',
+  border: '1px solid var(--border)',
   backgroundColor: 'transparent',
   cursor: 'pointer',
-  fontSize: '15px',
-  color: '#374151',
-  fontFamily: "'Inter', system-ui, sans-serif",
 };
 
 const mobileNavStyle: React.CSSProperties = {
@@ -481,44 +501,34 @@ const mobileNavStyle: React.CSSProperties = {
   flexDirection: 'column',
   padding: '8px 16px 16px',
   gap: '2px',
-  borderTop: '1px solid #e5e7eb',
-  backgroundColor: '#ffffff',
+  borderTop: '1px solid var(--border)',
+  backgroundColor: 'var(--surface)',
 };
-
-const mobileLinkStyle = (isActive: boolean): React.CSSProperties => ({
-  display: 'flex',
-  alignItems: 'center',
-  gap: '10px',
-  padding: '9px 12px',
-  borderRadius: '7px',
-  textDecoration: 'none',
-  fontSize: '14px',
-  fontWeight: isActive ? '600' : '400',
-  color: isActive ? '#111827' : '#6b7280',
-  backgroundColor: isActive ? '#f3f4f6' : 'transparent',
-});
 
 const mobileLogoutStyle: React.CSSProperties = {
   marginTop: '8px',
-  padding: '9px 12px',
-  borderRadius: '7px',
-  border: '1px solid #e5e7eb',
+  display: 'flex',
+  alignItems: 'center',
+  gap: 10,
+  padding: '10px 12px',
+  borderRadius: 'var(--radius-sm)',
+  border: '1px solid var(--border)',
   backgroundColor: 'transparent',
-  color: '#6b7280',
+  color: 'var(--text-muted)',
   fontSize: '14px',
+  fontWeight: 500,
   cursor: 'pointer',
   textAlign: 'left',
-  fontFamily: "'Inter', system-ui, sans-serif",
+  fontFamily: 'var(--font)',
   transition: 'all 0.15s ease',
 };
 
 const mainStyle: React.CSSProperties = {
   flex: 1,
-  padding: '32px 24px',
-  maxWidth: '1400px',
   width: '100%',
+  maxWidth: '1440px',
   margin: '0 auto',
-  boxSizing: 'border-box',
+  padding: 0,
 };
 
 export default AppLayout;

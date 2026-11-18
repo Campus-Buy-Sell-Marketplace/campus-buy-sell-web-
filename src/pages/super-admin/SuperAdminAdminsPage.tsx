@@ -1,26 +1,26 @@
 // ============================================================
-// LAVSA — Super Admin Admins Page — Light Theme
+// LAVSA — Super Admin Admins Page
 // ============================================================
 
 import React from 'react';
 import AppLayout from '../../components/Layout/AppLayout';
+import { Card, PageHeader } from '../../components/UI/ui';
 
 const SuperAdminAdminsPage: React.FC = () => (
   <AppLayout>
-    <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-      <h1 style={headingStyle}>Admin Management</h1>
-      <p style={subStyle}>Grant or revoke admin privileges across the platform</p>
-      <div style={cardStyle}>
-        <p style={{ color: '#9ca3af', margin: 0, fontSize: '14px' }}>
-          Admin delegation and permissions control — connect backend for live data.
+    <div className="page super-admin-admins" style={{ maxWidth: 1000, margin: '0 auto' }}>
+      <PageHeader
+        title="Admin Management"
+        subtitle="Grant or revoke administrative privileges across campus units"
+        icon="users"
+      />
+      <Card padded>
+        <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: 14 }}>
+          Administrative access control and delegation. Use the User Management tab to assign Admin roles to campus representatives.
         </p>
-      </div>
+      </Card>
     </div>
   </AppLayout>
 );
-
-const headingStyle: React.CSSProperties = { color: '#111827', fontSize: '24px', fontWeight: '700', margin: '0 0 4px 0' };
-const subStyle: React.CSSProperties     = { color: '#6b7280', fontSize: '14px', margin: '0 0 24px 0' };
-const cardStyle: React.CSSProperties    = { backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '24px' };
 
 export default SuperAdminAdminsPage;

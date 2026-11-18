@@ -2,12 +2,21 @@
 // LAVSA — Seller Orders Page
 // Shows incoming orders for this seller.
 // For PENDING_MEETUP orders: seller enters buyer's OTP to confirm delivery.
+// Redesigned with the LAVSA design system (global.css + UI kit).
 // ============================================================
 
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppLayout from '../../components/Layout/AppLayout';
 import api from '../../services/api';
+import { Button, Card, Badge, EmptyState, PageHeader, PageLoader, ErrorBanner } from '../../components/UI/ui';
+import {
+  IconShoppingBag,
+  IconMapPin,
+  IconClock,
+  IconUser,
+} from '../../components/UI/Icons';
+import { formatPrice, formatDate } from '../../utils/format';
 
 interface OrderItem {
   product_id: string;
@@ -32,14 +41,14 @@ interface SellerOrder {
   items: OrderItem[];
 }
 
-const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {
-  PENDING_MEETUP:      { label: 'Awaiting Meetup',         color: '#92400e', bg: '#fffbeb' },
-  PAID_PENDING_MEETUP: { label: 'Paid · Awaiting Meetup', color: '#1e40af', bg: '#eff6ff' },
-  PENDING_PAYMENT:     { label: 'Payment Pending',         color: '#b45309', bg: '#fef3c7' },
-  COMPLETED:           { label: 'Completed',               color: '#065f46', bg: '#f0fdf4' },
-  CANCELLED:           { label: 'Cancelled',                color: '#991b1b', bg: '#fef2f2' },
-  CONFIRMED:           { label: 'Confirmed',                 color: '#065f46', bg: '#f0fdf4' },
-  PENDING:             { label: 'Pending',                   color: '#92400e', bg: '#fffbeb' },
+const STATUS_CONFIG: Record<string, { label: string; color: 'amber' | 'blue' | 'green' | 'red' | 'gray' }> = {
+  PENDING_MEETUP: { label: 'Awaiting Meetup', color: 'amber' },
+  PAID_PENDING_MEETUP: { label: 'Paid · Awaiting Meetup', color: 'blue' },
+  PENDING_PAYMENT: { label: 'Payment Pending', color: 'amber' },
+  COMPLETED: { label: 'Completed', color: 'green' },
+  CANCELLED: { label: 'Cancelled', color: 'red' },
+  CONFIRMED: { label: 'Confirmed', color: 'green' },
+  PENDING: { label: 'Pending', color: 'gray' },
 };
 
 const SellerOrdersPage: React.FC = () => {
@@ -47,6 +56,7 @@ const SellerOrdersPage: React.FC = () => {
   const [orders, setOrders] = useState<SellerOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [filter, setFilter] = useState<'ALL' | 'PENDING' | 'COMPLETED'>('ALL');
 
   // OTP input state per order id
   const [otpInputs, setOtpInputs] = useState<Record<string, string>>({});
@@ -63,7 +73,7 @@ const SellerOrdersPage: React.FC = () => {
     api
       .get<{ orders: SellerOrder[] }>('/orders/seller/incoming')
       .then((res) => setOrders(res.data.orders))
-      .catch(() => setError('Failed to load orders.'))
+      .catch(() => setError('Failed to load incoming seller orders.'))
       .finally(() => setIsLoading(false));
   };
 
@@ -78,7 +88,6 @@ const SellerOrdersPage: React.FC = () => {
     try {
       const res = await api.post<{ message: string }>(`/orders/${orderId}/verify-otp`, { otp });
       setOtpSuccess((prev) => ({ ...prev, [orderId]: res.data.message }));
-      // Refresh orders to show updated status
       fetchOrders();
     } catch (err: any) {
       setOtpErrors((prev) => ({
@@ -90,224 +99,283 @@ const SellerOrdersPage: React.FC = () => {
     }
   };
 
+  const filteredOrders = orders.filter((o) => {
+    if (filter === 'PENDING') {
+      return o.status === 'PENDING_MEETUP' || o.status === 'PAID_PENDING_MEETUP' || o.status === 'PENDING_PAYMENT';
+    }
+    if (filter === 'COMPLETED') {
+      return o.status === 'COMPLETED' || o.status === 'CONFIRMED';
+    }
+    return true;
+  });
+
   return (
     <AppLayout>
-      <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-        <h1 style={headingStyle}>Incoming Orders</h1>
-        <p style={subStyle}>Orders placed by buyers for your products. Verify OTP after campus handoff.</p>
+      <div className="page seller-orders-page" style={{ maxWidth: 900, margin: '0 auto' }}>
+        <PageHeader
+          title="Incoming Orders"
+          subtitle="Orders placed by fellow campus students. Verify OTP upon meetup to finalize delivery."
+          icon="shopping-bag"
+        />
 
-        {isLoading && (
-          <div style={centerStyle}>
-            <div style={spinnerStyle} />
-            <p style={{ color: '#6b7280', marginTop: '12px' }}>Loading orders...</p>
-          </div>
-        )}
+        {/* Filter Pills */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
+          {(['ALL', 'PENDING', 'COMPLETED'] as const).map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              className={`category-chip ${filter === tab ? 'active' : ''}`}
+              onClick={() => setFilter(tab)}
+            >
+              {tab === 'ALL' ? 'All Orders' : tab === 'PENDING' ? 'Awaiting Meetup' : 'Completed'}
+            </button>
+          ))}
+        </div>
+
+        {isLoading && <PageLoader label="Loading incoming orders..." />}
 
         {error && (
-          <div style={errorStyle}>⚠️ {error}</div>
-        )}
-
-        {!isLoading && !error && orders.length === 0 && (
-          <div style={emptyCardStyle}>
-            <div style={{ fontSize: '48px', marginBottom: '12px' }}>📬</div>
-            <h3 style={{ color: '#111827', margin: '0 0 8px 0' }}>No incoming orders yet</h3>
-            <p style={{ color: '#9ca3af', fontSize: '14px', margin: 0 }}>
-              When buyers purchase your products, orders will appear here.
-            </p>
+          <div style={{ marginBottom: 16 }}>
+            <ErrorBanner message={error} onRetry={fetchOrders} />
           </div>
         )}
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {orders.map((order) => {
-            const statusInfo = STATUS_LABELS[order.status] || { label: order.status, color: '#374151', bg: '#f3f4f6' };
-            const isPending = order.status === 'PENDING_MEETUP' || order.status === 'PAID_PENDING_MEETUP';
-            const isVerifyingThis = verifying === order.id;
+        {!isLoading && !error && filteredOrders.length === 0 && (
+          <EmptyState
+            icon="shopping-bag"
+            title="No orders found"
+            description={
+              filter === 'PENDING'
+                ? 'No pending meetups at this time.'
+                : 'You have not received any orders yet. Make sure your listings are active!'
+            }
+          />
+        )}
 
-            return (
-              <div key={order.id} style={orderCardStyle}>
-                {/* Header */}
-                <div style={orderHeaderStyle}>
-                  <div>
-                    <span style={{ fontSize: '12px', color: '#9ca3af', display: 'block' }}>
-                      Order #{order.id.slice(0, 8).toUpperCase()}
-                    </span>
-                    <span style={{ fontSize: '13px', fontWeight: '600', color: '#374151' }}>
-                      {order.buyer_name}
-                    </span>
-                    <span style={{ fontSize: '12px', color: '#9ca3af', display: 'block' }}>
-                      {order.buyer_email}
-                    </span>
-                    <span style={{ fontSize: '12px', color: '#6b7280' }}>
-                      {new Date(order.created_at).toLocaleDateString('en-IN', {
-                        day: 'numeric', month: 'short', year: 'numeric',
-                      })}
-                    </span>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <span style={{ ...statusBadgeStyle, color: statusInfo.color, backgroundColor: statusInfo.bg }}>
-                      {statusInfo.label}
-                    </span>
-                    <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
-                      {order.payment_method === 'OFFLINE' ? 'Cash at Meetup' : 'Online'}
+        {!isLoading && filteredOrders.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+            {filteredOrders.map((order) => {
+              const statusCfg = STATUS_CONFIG[order.status] ?? { label: order.status, color: 'gray' };
+              const isPending = order.status === 'PENDING_MEETUP' || order.status === 'PAID_PENDING_MEETUP';
+              const otpVal = otpInputs[order.id] || '';
+              const otpErr = otpErrors[order.id];
+              const otpSucc = otpSuccess[order.id];
+
+              return (
+                <Card key={order.id} padded className="seller-order-card" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  {/* Order Header */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'flex-start',
+                      paddingBottom: 14,
+                      borderBottom: '1px solid var(--border)',
+                      gap: 12,
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)' }}>
+                          Order #{order.id.slice(0, 8).toUpperCase()}
+                        </span>
+                        <Badge color={statusCfg.color}>{statusCfg.label}</Badge>
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+                        Ordered on {formatDate(order.created_at)} · Payment:{' '}
+                        <strong>{order.payment_method === 'ONLINE' ? 'Razorpay Escrow' : 'Cash at Meetup'}</strong>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        icon="message"
+                        onClick={() => navigate(`/chat/${order.id}`)}
+                        id={`chat-buyer-${order.id}`}
+                      >
+                        Chat with Buyer
+                      </Button>
                     </div>
                   </div>
-                </div>
 
-                {/* Items */}
-                <div style={itemsListStyle}>
-                  {order.items.map((item, i) => (
-                    <div key={i} style={itemRowStyle}>
-                      {item.image_url && (
-                        <img src={item.image_url} alt={item.title} style={itemImgStyle} />
+                  {/* Buyer & Meetup Details */}
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                      gap: 12,
+                      background: 'var(--surface-soft)',
+                      padding: 14,
+                      borderRadius: 'var(--radius-sm)',
+                      border: '1px solid var(--border)',
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
+                        Buyer Info
+                      </div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <IconUser size={14} color="var(--brand)" />
+                        {order.buyer_name}
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                        {order.buyer_email}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
+                        Campus Handover Details
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
+                        <IconMapPin size={13} color="var(--brand)" />
+                        {order.meetup_location || 'Campus Central Library'}
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                        <IconClock size={13} color="var(--text-faint)" />
+                        {order.meetup_time || 'Campus Hours'}
+                      </div>
+                      {order.meetup_notes && (
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', fontStyle: 'italic', marginTop: 2 }}>
+                          "{order.meetup_notes}"
+                        </div>
                       )}
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>{item.title}</div>
-                        <div style={{ fontSize: '12px', color: '#9ca3af' }}>
-                          Qty: {item.quantity} × ₹{Number(item.unit_price).toFixed(2)}
+                    </div>
+                  </div>
+
+                  {/* Order Items */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {order.items.map((item, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 12,
+                          padding: '8px 12px',
+                          borderRadius: 'var(--radius-xs)',
+                          background: 'var(--surface)',
+                          border: '1px solid var(--border)',
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: 44,
+                            height: 44,
+                            borderRadius: 'var(--radius-xs)',
+                            overflow: 'hidden',
+                            background: 'var(--surface-muted)',
+                            flexShrink: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          {item.image_url ? (
+                            <img src={item.image_url} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ) : (
+                            <IconShoppingBag size={18} color="var(--text-faint)" />
+                          )}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }} className="truncate-1">
+                            {item.title}
+                          </div>
+                          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                            Qty: {item.quantity} · {formatPrice(Number(item.unit_price))} each
+                          </div>
+                        </div>
+                        <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--ink)' }}>
+                          {formatPrice(Number(item.unit_price) * item.quantity)}
                         </div>
                       </div>
-                      <div style={{ fontWeight: '700', color: '#111827', fontSize: '14px' }}>
-                        ₹{(item.quantity * Number(item.unit_price)).toFixed(2)}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Total */}
-                <div style={totalRowStyle}>
-                  <span style={{ color: '#374151', fontSize: '14px' }}>Order Total</span>
-                  <span style={{ fontWeight: '800', fontSize: '16px', color: '#111827' }}>
-                    ₹{Number(order.total_amount).toFixed(2)}
-                  </span>
-                </div>
-
-                {/* Campus Meetup Information for Seller */}
-                {order.meetup_location && (
-                  <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '10px 14px', marginTop: '12px', fontSize: '13px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#166534', fontWeight: '700', marginBottom: '4px' }}>
-                      <span>Handover Spot:</span>
-                      <span>{order.meetup_location}</span>
-                    </div>
-                    {order.meetup_time && (
-                      <div style={{ color: '#15803d', fontSize: '12px', marginBottom: order.meetup_notes ? '4px' : '0' }}>
-                        <strong>Scheduled Meetup:</strong> {order.meetup_time}
-                      </div>
-                    )}
-                    {order.meetup_notes && (
-                      <div style={{ color: '#166534', fontSize: '12px', fontStyle: 'italic', marginTop: '2px' }}>
-                        Note from buyer: "{order.meetup_notes}"
-                      </div>
-                    )}
+                    ))}
                   </div>
-                )}
 
-                {/* ── OTP Verification Panel (only for PENDING_MEETUP) ── */}
-                {isPending && (
-                  <div style={otpPanelStyle}>
-                    <p style={otpTitleStyle}>Enter Delivery OTP</p>
-                    <p style={otpHintStyle}>
-                      Ask the buyer to share their 6-digit OTP <strong>after you hand over the item</strong>.
-                      {order.payment_method === 'OFFLINE' && ' Collect cash payment first.'}
-                    </p>
-
-                    <div style={otpInputRowStyle}>
-                      <input
-                        id={`otp-input-${order.id}`}
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={6}
-                        placeholder="Enter 6-digit OTP"
-                        value={otpInputs[order.id] || ''}
-                        onChange={(e) => {
-                          const val = e.target.value.replace(/\D/g, '').slice(0, 6);
-                          setOtpInputs((prev) => ({ ...prev, [order.id]: val }));
-                          setOtpErrors((prev) => ({ ...prev, [order.id]: '' }));
-                        }}
-                        style={otpInputStyle}
-                        disabled={isVerifyingThis}
-                      />
-                      <button
-                        id={`verify-otp-btn-${order.id}`}
-                        onClick={() => handleVerifyOtp(order.id)}
-                        disabled={isVerifyingThis || (otpInputs[order.id] || '').length !== 6}
-                        style={verifyBtnStyle(isVerifyingThis || (otpInputs[order.id] || '').length !== 6)}
-                      >
-                        {isVerifyingThis ? 'Verifying…' : 'Confirm Delivery'}
-                      </button>
-                    </div>
-
-                    {otpErrors[order.id] && (
-                      <p style={otpErrStyle}>{otpErrors[order.id]}</p>
-                    )}
-                  </div>
-                )}
-
-                {/* Success message after OTP verified */}
-                {otpSuccess[order.id] && (
-                  <div style={successNoteStyle}>{otpSuccess[order.id]}</div>
-                )}
-
-                {order.status === 'COMPLETED' && !otpSuccess[order.id] && (
-                  <div style={completedNoteStyle}>Delivery confirmed. OTP was verified.</div>
-                )}
-
-                {/* Chat button */}
-                <div style={{ marginTop: '12px', textAlign: 'right' }}>
-                  <button
-                    id={`chat-order-${order.id}`}
-                    onClick={() => navigate(`/chat/${order.id}`)}
-                    style={chatBtnStyle}
+                  {/* Total Amount & OTP Verification Form */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      paddingTop: 12,
+                      borderTop: '1px solid var(--border)',
+                      flexWrap: 'wrap',
+                      gap: 14,
+                    }}
                   >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                    </svg>
-                    Chat with Buyer
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+                    <div>
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Total Sale Value</div>
+                      <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--brand-active)' }}>
+                        {formatPrice(Number(order.total_amount))}
+                      </div>
+                    </div>
 
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-        #verify-otp-btn:hover:not(:disabled) { background-color: #065f46 !important; }
-        button[id^="chat-order-"]:hover { background-color: #374151 !important; }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-      `}</style>
+                    {/* Verification input for pending order */}
+                    {isPending && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <input
+                          type="text"
+                          maxLength={6}
+                          placeholder="Enter 6-digit OTP"
+                          value={otpVal}
+                          onChange={(e) =>
+                            setOtpInputs((prev) => ({ ...prev, [order.id]: e.target.value.replace(/\D/g, '') }))
+                          }
+                          className="input"
+                          style={{
+                            width: 140,
+                            fontFamily: 'monospace',
+                            fontSize: 15,
+                            letterSpacing: 2,
+                            textAlign: 'center',
+                            height: 38,
+                          }}
+                          id={`otp-input-${order.id}`}
+                        />
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          icon="check"
+                          loading={verifying === order.id}
+                          disabled={otpVal.length !== 6 || verifying === order.id}
+                          onClick={() => handleVerifyOtp(order.id)}
+                          id={`verify-otp-btn-${order.id}`}
+                        >
+                          Confirm Delivery
+                        </Button>
+                      </div>
+                    )}
+
+                    {order.otp_verified && (
+                      <Badge color="green" icon="check-circle">
+                        Delivery Verified &amp; Completed
+                      </Badge>
+                    )}
+                  </div>
+
+                  {otpErr && (
+                    <div style={{ fontSize: 12, color: 'var(--danger)', fontWeight: 600 }}>
+                      ⚠️ {otpErr}
+                    </div>
+                  )}
+
+                  {otpSucc && (
+                    <div style={{ fontSize: 12, color: 'var(--success-strong)', fontWeight: 600 }}>
+                      ✓ {otpSucc}
+                    </div>
+                  )}
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </AppLayout>
   );
 };
-
-// ── Styles ────────────────────────────────────────────────────────────────────
-
-const headingStyle: React.CSSProperties = { color: '#111827', fontSize: '24px', fontWeight: '700', margin: '0 0 4px 0' };
-const subStyle: React.CSSProperties = { color: '#6b7280', fontSize: '14px', margin: '0 0 24px 0' };
-const centerStyle: React.CSSProperties = { textAlign: 'center', padding: '60px 0' };
-const spinnerStyle: React.CSSProperties = { width: '32px', height: '32px', border: '3px solid #e5e7eb', borderTop: '3px solid #111827', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto' };
-const errorStyle: React.CSSProperties = { padding: '12px 16px', borderRadius: '8px', backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', fontSize: '14px', marginBottom: '16px' };
-const emptyCardStyle: React.CSSProperties = { backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '48px 24px', textAlign: 'center' };
-const orderCardStyle: React.CSSProperties = { backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px' };
-const orderHeaderStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #f3f4f6' };
-const statusBadgeStyle: React.CSSProperties = { padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600', display: 'inline-block' };
-const itemsListStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '14px' };
-const itemRowStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: '12px' };
-const itemImgStyle: React.CSSProperties = { width: '48px', height: '48px', objectFit: 'cover', borderRadius: '8px', flexShrink: 0 };
-const totalRowStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: '1px solid #f3f4f6' };
-const otpPanelStyle: React.CSSProperties = { marginTop: '14px', padding: '14px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px' };
-const otpTitleStyle: React.CSSProperties = { fontSize: '13px', fontWeight: '700', color: '#065f46', margin: '0 0 6px 0' };
-const otpHintStyle: React.CSSProperties = { fontSize: '12px', color: '#374151', margin: '0 0 12px 0', lineHeight: '1.5' };
-const otpInputRowStyle: React.CSSProperties = { display: 'flex', gap: '8px', alignItems: 'center' };
-const otpInputStyle: React.CSSProperties = { padding: '10px 14px', borderRadius: '8px', border: '1.5px solid #d1fae5', fontSize: '18px', fontWeight: '700', letterSpacing: '4px', width: '160px', fontFamily: "'Inter', system-ui, sans-serif", color: '#111827', outline: 'none', textAlign: 'center' };
-const verifyBtnStyle = (disabled: boolean): React.CSSProperties => ({
-  padding: '10px 18px', borderRadius: '8px', border: 'none', fontSize: '13px', fontWeight: '700', cursor: disabled ? 'not-allowed' : 'pointer', fontFamily: "'Inter', system-ui, sans-serif", transition: 'background-color 0.15s ease',
-  backgroundColor: disabled ? '#9ca3af' : '#065f46',
-  color: '#ffffff',
-});
-const otpErrStyle: React.CSSProperties = { fontSize: '12px', color: '#991b1b', margin: '8px 0 0 0' };
-const successNoteStyle: React.CSSProperties = { marginTop: '12px', padding: '10px 12px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', fontSize: '13px', color: '#065f46' };
-const completedNoteStyle: React.CSSProperties = { marginTop: '12px', padding: '10px 12px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', fontSize: '13px', color: '#065f46' };
-const chatBtnStyle: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '8px', backgroundColor: '#111827', color: '#ffffff', border: 'none', fontSize: '13px', fontWeight: '600', cursor: 'pointer', transition: 'background-color 0.15s ease' };
 
 export default SellerOrdersPage;

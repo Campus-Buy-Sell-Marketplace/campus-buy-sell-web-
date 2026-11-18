@@ -1,17 +1,24 @@
 // ============================================================
-// LAVSA — Settings Page — Light Theme
-// Persists notification preference to backend.
+// LAVSA — Settings Page
+// Persists notification preferences to backend.
+// Redesigned with the LAVSA design system (global.css + UI kit).
 // ============================================================
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import AppLayout from '../../components/Layout/AppLayout';
 import { useAuth } from '../../context/AuthContext';
 import { getPreferences, savePreferences } from '../../services/userService';
+import { Card, PageHeader, Badge, PageLoader } from '../../components/UI/ui';
+import {
+  IconBell,
+  IconUser,
+  IconMail,
+  IconShield,
+  IconCheck,
+} from '../../components/UI/Icons';
 
 const SettingsPage: React.FC = () => {
-  const { user, isSeller } = useAuth();
-  const navigate = useNavigate();
+  const { user } = useAuth();
   const [notifications, setNotifications] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -44,144 +51,135 @@ const SettingsPage: React.FC = () => {
 
   return (
     <AppLayout>
-      <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-        <h1 style={headingStyle}>Settings</h1>
-        <p style={subStyle}>Manage your account preferences</p>
+      <div className="page settings-page" style={{ maxWidth: 740, margin: '0 auto' }}>
+        <PageHeader
+          title="Account Settings"
+          subtitle="Manage your notifications and account preferences"
+          icon="settings"
+        />
 
-        {/* Account Info */}
-        <section style={sectionStyle}>
-          <h2 style={sectionHeadingStyle}>Account</h2>
-          <div style={infoRowStyle}>
-            <span style={labelStyle}>Name</span>
-            <span style={valueStyle}>{user?.name}</span>
-          </div>
-          <div style={{ ...infoRowStyle, borderBottom: 'none' }}>
-            <span style={labelStyle}>Email</span>
-            <span style={valueStyle}>{user?.email}</span>
-          </div>
-        </section>
+        {loading ? (
+          <PageLoader label="Loading your settings..." />
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            {/* Account Information Card */}
+            <Card padded>
+              <h2 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 16px 0', color: 'var(--ink)' }}>
+                Account Information
+              </h2>
 
-        {/* Preferences */}
-        <section style={sectionStyle}>
-          <h2 style={sectionHeadingStyle}>Preferences</h2>
-          <div style={{ ...infoRowStyle, borderBottom: 'none' }}>
-            <div>
-              <div style={labelStyle}>Email Notifications</div>
-              <div style={{ color: '#9ca3af', fontSize: '12px', marginTop: '2px' }}>
-                Receive order updates by email
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 34, height: 34, borderRadius: 8, background: 'var(--surface-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <IconUser size={16} color="var(--text-secondary)" />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Display Name</div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>{user?.name}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 34, height: 34, borderRadius: 8, background: 'var(--surface-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <IconMail size={16} color="var(--text-secondary)" />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Campus Email</div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>{user?.email}</div>
+                    </div>
+                  </div>
+                  <Badge color="green">Verified</Badge>
+                </div>
               </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {saving && <span style={{ fontSize: '11px', color: '#9ca3af' }}>Saving…</span>}
-              {saved && !saving && (
-                <span style={{ fontSize: '11px', color: '#059669', fontWeight: '600' }}>✓ Saved</span>
-              )}
-              <button
-                onClick={handleToggle}
-                style={toggleStyle(notifications)}
-                disabled={loading || saving}
-                id="notifications-toggle"
-                title={notifications ? 'Disable email notifications' : 'Enable email notifications'}
-              >
-                <div style={toggleKnobStyle(notifications)} />
-              </button>
-            </div>
-          </div>
-        </section>
+            </Card>
 
-        {/* Selling */}
-        {!isSeller && (
-          <section style={sectionStyle}>
-            <h2 style={sectionHeadingStyle}>Selling</h2>
-            <div style={{ padding: '20px' }}>
-              <p style={{ color: '#374151', fontSize: '14px', margin: '0 0 8px 0' }}>
-                Want to sell items on UniTrade? Apply to become a seller and start listing products for your campus.
-              </p>
-              <p style={{ color: '#9ca3af', fontSize: '12px', margin: '0 0 16px 0' }}>
-                You'll verify your identity and submit a brief application. Admin approval is required.
-              </p>
-              <button
-                onClick={() => navigate('/seller/sign-in')}
-                style={sellerBtnStyle}
-                id="become-seller-btn"
-              >
-                Start Selling →
-              </button>
-            </div>
-          </section>
-        )}
+            {/* Notification Preferences Card */}
+            <Card padded>
+              <h2 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 16px 0', color: 'var(--ink)' }}>
+                Preferences
+              </h2>
 
-        {isSeller && (
-          <section style={{ ...sectionStyle, borderColor: '#d1fae5' }}>
-            <div style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ fontSize: '24px' }}>✅</span>
-              <div>
-                <div style={{ color: '#065f46', fontWeight: '600', fontSize: '14px' }}>You are an active seller</div>
-                <div style={{ color: '#6b7280', fontSize: '13px', marginTop: '2px' }}>Go to your seller dashboard to manage listings.</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--brand-soft)', color: 'var(--brand)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <IconBell size={18} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>
+                      Email Notifications
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                      Receive order updates, buyer chats, and meetup reminders by email
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  {saving && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Saving…</span>}
+                  {saved && !saving && (
+                    <span style={{ fontSize: 12, color: 'var(--success-strong)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <IconCheck size={14} /> Saved
+                    </span>
+                  )}
+
+                  <button
+                    onClick={handleToggle}
+                    disabled={saving}
+                    id="settings-notification-toggle"
+                    aria-label="Toggle notifications"
+                    style={{
+                      width: 46,
+                      height: 26,
+                      borderRadius: 13,
+                      border: 'none',
+                      background: notifications ? 'var(--brand)' : 'var(--border-strong)',
+                      cursor: 'pointer',
+                      position: 'relative',
+                      transition: 'background 0.2s ease',
+                      padding: 2,
+                    }}
+                  >
+                    <span
+                      style={{
+                        display: 'block',
+                        width: 22,
+                        height: 22,
+                        borderRadius: '50%',
+                        background: '#ffffff',
+                        boxShadow: 'var(--shadow-xs)',
+                        transform: notifications ? 'translateX(20px)' : 'translateX(0)',
+                        transition: 'transform 0.2s ease',
+                      }}
+                    />
+                  </button>
+                </div>
               </div>
-              <button
-                onClick={() => navigate('/seller/dashboard')}
-                style={{ ...sellerBtnStyle, marginLeft: 'auto', backgroundColor: '#065f46', borderColor: '#065f46' }}
-                id="go-to-seller-dashboard-btn"
-              >
-                Dashboard →
-              </button>
-            </div>
-          </section>
-        )}
+            </Card>
 
-        <style>{`
-          #notifications-toggle:hover:not(:disabled) { opacity: 0.85; }
-        `}</style>
+            {/* Safety & Guidelines Card */}
+            <Card padded style={{ background: 'var(--surface-soft)' }}>
+              <div style={{ display: 'flex', gap: 12 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--brand-soft)', color: 'var(--brand)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <IconShield size={18} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: 14, fontWeight: 700, margin: '0 0 4px 0', color: 'var(--ink)' }}>
+                    Campus Marketplace Safety
+                  </h3>
+                  <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
+                    All transactions take place on campus. Always meet at public locations such as the library, canteen, or student activity centers. Never share your Delivery OTP until you have physically checked and received your item.
+                  </p>
+                </div>
+              </div>
+            </Card>
+          </div>
+        )}
       </div>
     </AppLayout>
   );
-};
-
-const headingStyle: React.CSSProperties = { color: '#111827', fontSize: '24px', fontWeight: '700', margin: '0 0 4px 0' };
-const subStyle: React.CSSProperties     = { color: '#6b7280', fontSize: '14px', margin: '0 0 24px 0' };
-
-const sectionStyle: React.CSSProperties = {
-  backgroundColor: '#ffffff',
-  border: '1px solid #e5e7eb',
-  borderRadius: '12px',
-  marginBottom: '16px',
-  overflow: 'hidden',
-};
-const sectionHeadingStyle: React.CSSProperties = {
-  color: '#111827', fontSize: '13px', fontWeight: '600',
-  padding: '14px 20px', margin: 0,
-  borderBottom: '1px solid #f3f4f6',
-  textTransform: 'uppercase', letterSpacing: '0.05em',
-};
-const infoRowStyle: React.CSSProperties = {
-  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-  padding: '14px 20px', borderBottom: '1px solid #f3f4f6',
-};
-const labelStyle: React.CSSProperties  = { color: '#6b7280', fontSize: '13px', fontWeight: '500' };
-const valueStyle: React.CSSProperties  = { color: '#111827', fontSize: '14px', fontWeight: '600' };
-
-const toggleStyle = (on: boolean): React.CSSProperties => ({
-  width: '40px', height: '22px', borderRadius: '11px',
-  backgroundColor: on ? '#111827' : '#d1d5db',
-  border: 'none', cursor: 'pointer', padding: '2px',
-  display: 'flex', alignItems: 'center',
-  transition: 'background-color 0.2s ease', flexShrink: 0,
-  justifyContent: on ? 'flex-end' : 'flex-start',
-  opacity: 1,
-});
-const toggleKnobStyle = (_on: boolean): React.CSSProperties => ({
-  width: '18px', height: '18px', borderRadius: '50%',
-  backgroundColor: '#ffffff',
-  boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-  transition: 'all 0.2s ease',
-});
-const sellerBtnStyle: React.CSSProperties = {
-  padding: '10px 20px', borderRadius: '8px', border: '1.5px solid #111827',
-  backgroundColor: '#111827', color: '#ffffff',
-  fontSize: '14px', fontWeight: '600', cursor: 'pointer',
-  fontFamily: "'Inter', system-ui, sans-serif",
-  transition: 'all 0.15s ease',
 };
 
 export default SettingsPage;

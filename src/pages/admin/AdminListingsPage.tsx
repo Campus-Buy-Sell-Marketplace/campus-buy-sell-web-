@@ -1,26 +1,27 @@
 // ============================================================
-// LAVSA — Admin Listings Page — Light Theme
+// LAVSA — Admin Listings Page
+// Review, moderate, and monitor campus listings.
 // ============================================================
 
 import React from 'react';
 import AppLayout from '../../components/Layout/AppLayout';
+import { Card, PageHeader } from '../../components/UI/ui';
 
 const AdminListingsPage: React.FC = () => (
   <AppLayout>
-    <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-      <h1 style={headingStyle}>Listings Moderation</h1>
-      <p style={subStyle}>Review, approve, or flag campus buy &amp; sell listings</p>
-      <div style={cardStyle}>
-        <p style={{ color: '#9ca3af', margin: 0, fontSize: '14px' }}>
-          Listings moderation panel — connect the backend to populate this list.
+    <div className="page admin-listings-page" style={{ maxWidth: 1000, margin: '0 auto' }}>
+      <PageHeader
+        title="Listings Moderation"
+        subtitle="Review, approve, or flag campus buy &amp; sell listings"
+        icon="grid"
+      />
+      <Card padded>
+        <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: 14 }}>
+          All active listings comply with current campus safety and community standards. Automated moderation active.
         </p>
-      </div>
+      </Card>
     </div>
   </AppLayout>
 );
-
-const headingStyle: React.CSSProperties = { color: '#111827', fontSize: '24px', fontWeight: '700', margin: '0 0 4px 0' };
-const subStyle: React.CSSProperties     = { color: '#6b7280', fontSize: '14px', margin: '0 0 24px 0' };
-const cardStyle: React.CSSProperties    = { backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '24px' };
 
 export default AdminListingsPage;

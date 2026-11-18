@@ -2,12 +2,22 @@
 // LAVSA — Orders Page (Buyer)
 // Shows buyer's order history. For PENDING_MEETUP orders,
 // displays the delivery OTP so they can share it with the seller.
+// Redesigned with the LAVSA design system (global.css + UI kit).
 // ============================================================
 
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AppLayout from '../../components/Layout/AppLayout';
 import api from '../../services/api';
+import { Button, Card, Badge, EmptyState, PageHeader, PageLoader, ErrorBanner } from '../../components/UI/ui';
+import {
+  IconShoppingBag,
+  IconClock,
+  IconMapPin,
+  IconShield,
+  IconCheckCircle,
+} from '../../components/UI/Icons';
+import { formatPrice, formatDate } from '../../utils/format';
 
 interface OrderItem {
   product_id: string;
@@ -32,14 +42,14 @@ interface Order {
   items: OrderItem[];
 }
 
-const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {
-  PENDING_MEETUP:      { label: 'Awaiting Meetup',         color: '#92400e', bg: '#fffbeb' },
-  PAID_PENDING_MEETUP: { label: 'Paid · Awaiting Meetup', color: '#1e40af', bg: '#eff6ff' },
-  PENDING_PAYMENT:     { label: 'Payment Pending',         color: '#b45309', bg: '#fef3c7' },
-  COMPLETED:           { label: 'Completed',               color: '#065f46', bg: '#f0fdf4' },
-  CANCELLED:           { label: 'Cancelled',                color: '#991b1b', bg: '#fef2f2' },
-  CONFIRMED:           { label: 'Confirmed',                 color: '#065f46', bg: '#f0fdf4' },
-  PENDING:             { label: 'Pending',                   color: '#92400e', bg: '#fffbeb' },
+const STATUS_CONFIG: Record<string, { label: string; color: 'amber' | 'blue' | 'green' | 'red' | 'gray' }> = {
+  PENDING_MEETUP: { label: 'Awaiting Meetup', color: 'amber' },
+  PAID_PENDING_MEETUP: { label: 'Paid · Awaiting Meetup', color: 'blue' },
+  PENDING_PAYMENT: { label: 'Payment Pending', color: 'amber' },
+  COMPLETED: { label: 'Completed', color: 'green' },
+  CANCELLED: { label: 'Cancelled', color: 'red' },
+  CONFIRMED: { label: 'Confirmed', color: 'green' },
+  PENDING: { label: 'Pending', color: 'gray' },
 };
 
 const OrdersPage: React.FC = () => {
@@ -47,8 +57,9 @@ const OrdersPage: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  // Track which OTPs are revealed (by order id)
   const [revealedOtps, setRevealedOtps] = useState<Set<string>>(new Set());
+  const [payingOrderId, setPayingOrderId] = useState<string | null>(null);
+  const [copiedOtpId, setCopiedOtpId] = useState<string | null>(null);
 
   useEffect(() => {
     if (error) {
@@ -64,8 +75,6 @@ const OrdersPage: React.FC = () => {
       .catch(() => setError('Failed to load orders.'))
       .finally(() => setIsLoading(false));
   }, []);
-
-  const [payingOrderId, setPayingOrderId] = useState<string | null>(null);
 
   const handlePayNow = async (order: Order) => {
     setPayingOrderId(order.id);
@@ -117,7 +126,7 @@ const OrdersPage: React.FC = () => {
           },
         },
         theme: {
-          color: '#2563eb',
+          color: '#4f46e5',
         },
       };
 
@@ -137,247 +146,313 @@ const OrdersPage: React.FC = () => {
     });
   };
 
+  const handleCopyOtp = (orderId: string, otp: string) => {
+    navigator.clipboard.writeText(otp);
+    setCopiedOtpId(orderId);
+    setTimeout(() => setCopiedOtpId(null), 2000);
+  };
+
   return (
     <AppLayout>
-      <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-        <h1 style={headingStyle}>My Orders</h1>
-        <p style={subStyle}>Track items you have purchased from campus sellers</p>
+      <div className="page orders-page" style={{ maxWidth: 880, margin: '0 auto' }}>
+        <PageHeader
+          title="My Orders"
+          subtitle="Track items you have purchased and manage campus handoffs"
+          icon="shopping-bag"
+        />
 
-        {isLoading && (
-          <div style={centerStyle}>
-            <div style={spinnerStyle} />
-            <p style={{ color: '#6b7280', marginTop: '12px' }}>Loading orders...</p>
-          </div>
-        )}
+        {isLoading && <PageLoader label="Loading your orders..." />}
 
         {error && (
-          <div style={errorStyle}>
-            <span>{error}</span>
-            <button onClick={() => setError('')} style={dismissBtnStyle} aria-label="Dismiss">✕</button>
+          <div style={{ marginBottom: 16 }}>
+            <ErrorBanner message={error} onRetry={() => setError('')} />
           </div>
         )}
 
         {!isLoading && !error && orders.length === 0 && (
-          <div style={emptyCardStyle}>
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '14px' }}>
-              <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-                <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
-                <line x1="12" y1="22.08" x2="12" y2="12"/>
-              </svg>
-            </div>
-            <h2 style={{ color: '#374151', margin: '0 0 8px 0', fontSize: '18px' }}>No orders yet</h2>
-            <p style={{ color: '#9ca3af', fontSize: '14px', marginBottom: '20px' }}>
-              Add items to your cart and place an order!
-            </p>
-            <Link to="/home" style={shopBtnStyle} id="browse-products-btn">
-              Browse Products
-            </Link>
-          </div>
+          <EmptyState
+            icon="shopping-bag"
+            title="No orders yet"
+            description="Explore campus listings, add items to your cart, and place an order!"
+            action={
+              <Link to="/home" className="btn btn-primary" id="browse-products-btn">
+                Browse Campus Products
+              </Link>
+            }
+          />
         )}
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {orders.map((order) => {
-            const statusInfo = STATUS_LABELS[order.status] || { label: order.status, color: '#374151', bg: '#f3f4f6' };
-            const isPending = order.status === 'PENDING_MEETUP' || order.status === 'PAID_PENDING_MEETUP';
-            const otpRevealed = revealedOtps.has(order.id);
+        {!isLoading && orders.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {orders.map((order) => {
+              const statusCfg = STATUS_CONFIG[order.status] ?? { label: order.status, color: 'gray' };
+              const isPending = order.status === 'PENDING_MEETUP' || order.status === 'PAID_PENDING_MEETUP';
+              const isUnpaid = order.status === 'PENDING_PAYMENT';
+              const otpRevealed = revealedOtps.has(order.id);
 
-            return (
-              <div key={order.id} style={orderCardStyle}>
-                {/* Order header */}
-                <div style={orderHeaderStyle}>
-                  <div>
-                    <span style={{ fontSize: '12px', color: '#9ca3af', display: 'block' }}>
-                      Order #{order.id.slice(0, 8).toUpperCase()}
-                    </span>
-                    <span style={{ fontSize: '13px', color: '#6b7280' }}>
-                      {new Date(order.created_at).toLocaleDateString('en-IN', {
-                        day: 'numeric', month: 'short', year: 'numeric',
-                      })}
-                    </span>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <span style={{ ...statusBadgeStyle, color: statusInfo.color, backgroundColor: statusInfo.bg }}>
-                      {statusInfo.label}
-                    </span>
-                    <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
-                      {order.payment_method === 'OFFLINE' ? 'Cash at Meetup' : 'Online'}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Items */}
-                <div style={itemsListStyle}>
-                  {order.items.map((item, i) => (
-                    <div key={i} style={itemRowStyle}>
-                      {item.image_url && (
-                        <img src={item.image_url} alt={item.title} style={itemImgStyle} />
-                      )}
-                      <div>
-                        <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>{item.title}</div>
-                        <div style={{ fontSize: '12px', color: '#9ca3af' }}>
-                          Qty: {item.quantity} × ₹{Number(item.unit_price).toFixed(2)}
-                          {item.seller_name && ` · Sold by ${item.seller_name}`}
-                        </div>
+              return (
+                <Card key={order.id} padded className="order-card" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  {/* Order Card Header */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'flex-start',
+                      paddingBottom: 14,
+                      borderBottom: '1px solid var(--border)',
+                      gap: 12,
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)' }}>
+                          Order #{order.id.slice(0, 8).toUpperCase()}
+                        </span>
+                        <Badge color={statusCfg.color}>{statusCfg.label}</Badge>
                       </div>
-                      <div style={{ marginLeft: 'auto', fontWeight: '700', color: '#111827', fontSize: '14px' }}>
-                        ₹{(item.quantity * Number(item.unit_price)).toFixed(2)}
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+                        Placed on {formatDate(order.created_at)} · Payment via{' '}
+                        <strong>{order.payment_method === 'ONLINE' ? 'Razorpay Online' : 'Cash at Meetup'}</strong>
                       </div>
                     </div>
-                  ))}
-                </div>
 
-                {/* Total */}
-                <div style={totalRowStyle}>
-                  <span style={{ color: '#374151', fontSize: '14px' }}>Total</span>
-                  <span style={{ fontWeight: '800', fontSize: '16px', color: '#111827' }}>
-                    ₹{Number(order.total_amount).toFixed(2)}
-                  </span>
-                </div>
-
-                {/* Campus Meetup Information */}
-                {order.meetup_location && (
-                  <div style={{ backgroundColor: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px 14px', marginTop: '12px', fontSize: '13px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#1f2937', fontWeight: '600', marginBottom: '4px' }}>
-                      <span>Meetup Spot:</span>
-                      <span style={{ color: '#111827', fontWeight: '700' }}>{order.meetup_location}</span>
-                    </div>
-                    {order.meetup_time && (
-                      <div style={{ color: '#4b5563', fontSize: '12px', marginBottom: order.meetup_notes ? '4px' : '0' }}>
-                        <strong>Scheduled:</strong> {order.meetup_time}
-                      </div>
-                    )}
-                    {order.meetup_notes && (
-                      <div style={{ color: '#6b7280', fontSize: '12px', fontStyle: 'italic', marginTop: '2px' }}>
-                        Note: "{order.meetup_notes}"
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* OTP section — shown only for PENDING_MEETUP orders */}
-                {isPending && order.delivery_otp && (
-                  <div style={otpSectionStyle}>
-                    <div style={otpHeaderRow}>
-                      <span style={{ fontSize: '13px', fontWeight: '600', color: '#92400e' }}>
-                        Delivery OTP
-                      </span>
-                      <button
-                        id={`reveal-otp-${order.id}`}
-                        onClick={() => toggleOtpReveal(order.id)}
-                        style={revealBtnStyle}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        icon="message"
+                        onClick={() => navigate(`/chat/${order.id}`)}
+                        id={`chat-order-${order.id}`}
                       >
-                        {otpRevealed ? 'Hide OTP' : 'Show OTP'}
-                      </button>
-                    </div>
-                    {otpRevealed ? (
-                      <>
-                        <div style={otpDigitsRow}>
-                          {order.delivery_otp.split('').map((d, i) => (
-                            <div key={i} style={otpDigitStyle}>{d}</div>
-                          ))}
-                        </div>
-                        <p style={otpNoteStyle}>
-                          Share this code with the seller <strong>only after receiving your item</strong>.
-                        </p>
-                      </>
-                    ) : (
-                      <p style={{ fontSize: '12px', color: '#6b7280', margin: '4px 0 0 0' }}>
-                        Click "Show OTP" to reveal your delivery code.
-                      </p>
-                    )}
-                  </div>
-                )}
+                        Chat with Seller
+                      </Button>
 
-                {/* Pending Payment Card */}
-                {order.status === 'PENDING_PAYMENT' && (
-                  <div style={{ backgroundColor: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '12px 14px', marginTop: '12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-                      <div>
-                        <div style={{ fontWeight: '700', color: '#92400e', fontSize: '13px' }}>
-                          Payment Incomplete (15-min reservation window)
-                        </div>
-                        <div style={{ color: '#b45309', fontSize: '12px', marginTop: '2px' }}>
-                          Complete online payment to secure your items and generate your Delivery OTP.
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => handlePayNow(order)}
-                        disabled={payingOrderId === order.id}
+                      {isUnpaid && (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          icon="credit-card"
+                          loading={payingOrderId === order.id}
+                          onClick={() => handlePayNow(order)}
+                          id={`pay-order-${order.id}`}
+                        >
+                          Pay Now
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Order Items */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {order.items.map((item, idx) => (
+                      <div
+                        key={idx}
                         style={{
-                          backgroundColor: '#111827',
-                          color: '#ffffff',
-                          border: 'none',
-                          borderRadius: '6px',
-                          padding: '8px 14px',
-                          fontWeight: '700',
-                          fontSize: '12px',
-                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 14,
+                          background: 'var(--surface-soft)',
+                          padding: '10px 14px',
+                          borderRadius: 'var(--radius-sm)',
                         }}
                       >
-                        {payingOrderId === order.id ? 'Opening...' : 'Pay Now via Razorpay'}
-                      </button>
+                        <div
+                          style={{
+                            width: 52,
+                            height: 52,
+                            borderRadius: 'var(--radius-xs)',
+                            overflow: 'hidden',
+                            background: 'var(--surface-muted)',
+                            flexShrink: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          {item.image_url ? (
+                            <img
+                              src={item.image_url}
+                              alt={item.title}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                          ) : (
+                            <IconShoppingBag size={20} color="var(--text-faint)" />
+                          )}
+                        </div>
+
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <Link
+                            to={`/products/${item.product_id}`}
+                            style={{
+                              fontWeight: 600,
+                              fontSize: 14,
+                              color: 'var(--ink)',
+                              textDecoration: 'none',
+                            }}
+                            className="truncate-1"
+                          >
+                            {item.title}
+                          </Link>
+                          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                            Qty: {item.quantity} · {formatPrice(Number(item.unit_price))} each
+                            {item.seller_name ? ` · Sold by ${item.seller_name}` : ''}
+                          </div>
+                        </div>
+
+                        <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--ink)', flexShrink: 0 }}>
+                          {formatPrice(Number(item.unit_price) * item.quantity)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Meetup Info & Delivery OTP */}
+                  <div
+                    style={{
+                      background: 'var(--surface-soft)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 'var(--radius-sm)',
+                      padding: '12px 16px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      flexWrap: 'wrap',
+                      gap: 12,
+                    }}
+                  >
+                    <div style={{ fontSize: 12, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--ink)', fontWeight: 600 }}>
+                        <IconMapPin size={13} color="var(--brand)" />
+                        Spot: {order.meetup_location || 'Campus Central Library'}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-secondary)' }}>
+                        <IconClock size={13} color="var(--text-faint)" />
+                        Time: {order.meetup_time || 'Campus Hours'}
+                      </div>
+                      {order.meetup_notes && (
+                        <div style={{ color: 'var(--text-muted)', fontStyle: 'italic', marginTop: 2 }}>
+                          Note: "{order.meetup_notes}"
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Order Total</div>
+                      <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--brand-active)' }}>
+                        {formatPrice(Number(order.total_amount))}
+                      </div>
                     </div>
                   </div>
-                )}
 
-                {order.status === 'COMPLETED' && (
-                  <div style={completedNoteStyle}>Delivery confirmed. OTP was verified by the seller.</div>
-                )}
+                  {/* Delivery OTP Section (for pending meetup) */}
+                  {isPending && order.delivery_otp && (
+                    <div
+                      style={{
+                        background: 'var(--brand-soft)',
+                        border: '1px solid var(--brand-border)',
+                        borderRadius: 'var(--radius-sm)',
+                        padding: '12px 16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        flexWrap: 'wrap',
+                        gap: 12,
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div
+                          style={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: '50%',
+                            background: 'var(--brand)',
+                            color: '#fff',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                          }}
+                        >
+                          <IconShield size={16} />
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--brand-active)' }}>
+                            Campus Delivery OTP
+                          </div>
+                          <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+                            Provide this code to the seller only after receiving your item.
+                          </div>
+                        </div>
+                      </div>
 
-                {/* Chat button — available for active/completed orders */}
-                <div style={{ marginTop: '12px', textAlign: 'right' }}>
-                  <button
-                    id={`chat-order-${order.id}`}
-                    onClick={() => navigate(`/chat/${order.id}`)}
-                    style={chatBtnStyle}
-                  >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                    </svg>
-                    Chat with Seller
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div
+                          style={{
+                            fontFamily: 'monospace',
+                            fontSize: 18,
+                            fontWeight: 800,
+                            letterSpacing: 3,
+                            background: '#fff',
+                            padding: '4px 12px',
+                            borderRadius: 6,
+                            border: '1px solid var(--brand-border)',
+                            color: 'var(--ink)',
+                          }}
+                        >
+                          {otpRevealed ? order.delivery_otp : '••••••'}
+                        </div>
+
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          icon={otpRevealed ? 'eye-off' : 'eye'}
+                          onClick={() => toggleOtpReveal(order.id)}
+                        >
+                          {otpRevealed ? 'Hide' : 'Show'}
+                        </Button>
+
+                        {otpRevealed && (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            icon={copiedOtpId === order.id ? 'check' : 'copy'}
+                            onClick={() => handleCopyOtp(order.id, order.delivery_otp!)}
+                          >
+                            {copiedOtpId === order.id ? 'Copied' : 'Copy'}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {order.otp_verified && (
+                    <div
+                      style={{
+                        background: 'var(--success-soft)',
+                        border: '1px solid var(--success-border)',
+                        borderRadius: 'var(--radius-sm)',
+                        padding: '10px 14px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        fontSize: 12,
+                        color: 'var(--success-strong)',
+                        fontWeight: 600,
+                      }}
+                    >
+                      <IconCheckCircle size={15} color="var(--success-strong)" />
+                      Delivery confirmed &amp; verified via OTP handoff.
+                    </div>
+                  )}
+                </Card>
+              );
+            })}
+          </div>
+        )}
       </div>
-
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-        #browse-products-btn:hover { background-color: #374151 !important; }
-        button[id^="chat-order-"]:hover { background-color: #374151 !important; }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-      `}</style>
     </AppLayout>
   );
 };
-
-// ── Styles ────────────────────────────────────────────────────────────────────
-
-const headingStyle: React.CSSProperties = { color: '#111827', fontSize: '24px', fontWeight: '700', margin: '0 0 4px 0' };
-const subStyle: React.CSSProperties = { color: '#6b7280', fontSize: '14px', margin: '0 0 24px 0' };
-const centerStyle: React.CSSProperties = { textAlign: 'center', padding: '60px 0' };
-const spinnerStyle: React.CSSProperties = { width: '32px', height: '32px', border: '3px solid #e5e7eb', borderTop: '3px solid #111827', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto' };
-const errorStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderRadius: '8px', backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', fontSize: '14px', marginBottom: '16px' };
-const dismissBtnStyle: React.CSSProperties = { background: 'none', border: 'none', color: '#991b1b', cursor: 'pointer', fontWeight: 'bold' };
-const emptyCardStyle: React.CSSProperties = { textAlign: 'center', padding: '60px 24px', backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e5e7eb' };
-const shopBtnStyle: React.CSSProperties = { display: 'inline-block', padding: '10px 24px', borderRadius: '8px', backgroundColor: '#111827', color: '#ffffff', fontSize: '14px', fontWeight: '600', textDecoration: 'none' };
-const orderCardStyle: React.CSSProperties = { backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px' };
-const orderHeaderStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #f3f4f6' };
-const statusBadgeStyle: React.CSSProperties = { padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600', display: 'inline-block' };
-const itemsListStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '14px' };
-const itemRowStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: '12px' };
-const itemImgStyle: React.CSSProperties = { width: '48px', height: '48px', objectFit: 'cover', borderRadius: '8px', flexShrink: 0 };
-const totalRowStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: '1px solid #f3f4f6' };
-const otpSectionStyle: React.CSSProperties = { marginTop: '14px', padding: '14px', backgroundColor: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px' };
-const otpHeaderRow: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' };
-const revealBtnStyle: React.CSSProperties = { padding: '4px 12px', borderRadius: '6px', border: '1px solid #92400e', backgroundColor: '#ffffff', color: '#92400e', fontSize: '12px', fontWeight: '600', cursor: 'pointer', fontFamily: "'Inter', system-ui, sans-serif" };
-const otpDigitsRow: React.CSSProperties = { display: 'flex', gap: '6px', marginBottom: '8px' };
-const otpDigitStyle: React.CSSProperties = { width: '38px', height: '48px', borderRadius: '8px', backgroundColor: '#111827', color: '#ffffff', fontSize: '20px', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center' };
-const otpNoteStyle: React.CSSProperties = { fontSize: '11px', color: '#92400e', margin: 0 };
-const completedNoteStyle: React.CSSProperties = { marginTop: '12px', padding: '10px 12px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', fontSize: '13px', color: '#065f46' };
-const chatBtnStyle: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '8px', backgroundColor: '#111827', color: '#ffffff', border: 'none', fontSize: '13px', fontWeight: '600', cursor: 'pointer', transition: 'background-color 0.15s ease' };
 
 export default OrdersPage;

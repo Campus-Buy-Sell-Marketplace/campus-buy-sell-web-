@@ -1,6 +1,7 @@
 // ============================================================
 // LAVSA — Wishlist Page
 // Shows all saved/wishlisted products for the current user.
+// Built on the shared design system (global.css + UI primitives).
 // ============================================================
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -8,20 +9,17 @@ import { Link } from 'react-router-dom';
 import AppLayout from '../../components/Layout/AppLayout';
 import { getWishlist, removeFromWishlist, WishlistItem } from '../../services/userService';
 import CartButton from '../../components/CartButton/CartButton';
-
-const CONDITIONS: Record<string, string> = {
-  NEW: '#065f46',
-  LIKE_NEW: '#1e40af',
-  GOOD: '#374151',
-  FAIR: '#92400e',
-  POOR: '#991b1b',
-};
+import ProductCard from '../../components/ProductCard/ProductCard';
+import { Button, EmptyState, ErrorBanner, PageHeader, Skeleton } from '../../components/UI/ui';
+import { Icon, IconTrash } from '../../components/UI/Icons';
+import { useToast } from '../../context/ToastContext';
 
 const WishlistPage: React.FC = () => {
   const [items, setItems] = useState<WishlistItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  const [removingId, setRemovingId] = useState<string | null>(null);
+  const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
+  const { showToast } = useToast();
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -41,155 +39,201 @@ const WishlistPage: React.FC = () => {
   }, [load]);
 
   const handleRemove = async (productId: string) => {
-    setRemovingId(productId);
+    if (removingIds.has(productId)) return;
+    const item = items.find((i) => i.id === productId);
+
+    setRemovingIds((prev) => new Set(prev).add(productId));
     try {
       await removeFromWishlist(productId);
       setItems((prev) => prev.filter((i) => i.id !== productId));
+      if (item) showToast(`Removed "${item.title}" from wishlist`, 'info');
     } catch {
-      alert('Failed to remove from wishlist.');
+      showToast('Failed to remove from wishlist.', 'error');
     } finally {
-      setRemovingId(null);
+      setRemovingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(productId);
+        return next;
+      });
     }
   };
 
+  const countLabel = isLoading
+    ? 'Loading your saved items…'
+    : `${items.length} saved item${items.length !== 1 ? 's' : ''}`;
 
   return (
     <AppLayout>
-      <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-        <div style={headerRowStyle}>
-          <div>
-            <h1 style={headingStyle}>My Wishlist</h1>
-            <p style={subStyle}>
-              {isLoading ? 'Loading…' : `${items.length} saved item${items.length !== 1 ? 's' : ''}`}
-            </p>
+      <div className="page wl-page">
+        <PageHeader
+          title="Wishlist"
+          subtitle={countLabel}
+          icon="heart"
+          actions={
+            <Button
+              variant="ghost"
+              size="sm"
+              icon="refresh"
+              onClick={load}
+              disabled={isLoading}
+              id="wishlist-refresh-btn"
+            >
+              Refresh
+            </Button>
+          }
+        />
+
+        {error && (
+          <div style={{ marginBottom: 18 }}>
+            <ErrorBanner message={error} onRetry={load} />
           </div>
-        </div>
+        )}
 
-        {error && <div style={errorBoxStyle}>⚠️ {error}</div>}
-
-        {isLoading && (
-          <div style={centerStyle}>
-            <div style={spinnerStyle} />
-            <p style={{ color: '#6b7280', marginTop: '12px' }}>Loading wishlist…</p>
+        {isLoading && !error && (
+          <div className="product-grid" aria-hidden="true">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="card" style={{ overflow: 'hidden' }}>
+                <Skeleton h={215} r={0} style={{ borderRadius: 0 }} />
+                <div
+                  style={{
+                    padding: 14,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 10,
+                  }}
+                >
+                  <Skeleton w="85%" h={13} />
+                  <Skeleton w="55%" h={17} />
+                  <Skeleton w="70%" h={11} />
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
         {!isLoading && !error && items.length === 0 && (
-          <div style={emptyCardStyle}>
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '14px' }}>
-              <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-              </svg>
-            </div>
-            <h3 style={{ color: '#111827', margin: '0 0 8px 0' }}>Your wishlist is empty</h3>
-            <p style={{ color: '#6b7280', fontSize: '14px', margin: '0 0 20px 0' }}>
-              Browse products and click the heart icon to save items for later.
-            </p>
-            <Link to="/home" style={browseBtnStyle}>Browse Products →</Link>
+          <div className="card">
+            <EmptyState
+              icon="heart"
+              title="Your wishlist is empty"
+              description="Browse products and tap the heart icon to save items for later."
+              action={
+                <Link to="/home" className="btn btn-primary" id="wishlist-browse-btn">
+                  <Icon name="shopping-bag" size={16} />
+                  Browse products
+                  <Icon name="arrow-right" size={15} />
+                </Link>
+              }
+            />
           </div>
         )}
 
         {!isLoading && !error && items.length > 0 && (
-          <div style={gridStyle}>
+          <div className="product-grid">
             {items.map((item) => (
-              <Link
-                key={item.id}
-                to={`/products/${item.id}`}
-                style={cardStyle}
-                className="wish-card"
-                id={`wish-${item.id}`}
-              >
-                {/* Image */}
-                <div style={cardImageWrapStyle}>
-                  {item.image_url ? (
-                    <img src={item.image_url} alt={item.title} style={cardImageStyle} loading="lazy" />
-                  ) : (
-                    <div style={cardNoImageStyle}>
-                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-                        <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
-                        <line x1="12" y1="22.08" x2="12" y2="12"/>
-                      </svg>
-                    </div>
-                  )}
-                  {item.condition && (
-                    <span style={{ ...condBadgeStyle, backgroundColor: CONDITIONS[item.condition] || '#374151' }}>
-                      {item.condition.replace('_', ' ')}
-                    </span>
-                  )}
-                  {/* Remove from wishlist */}
+              <div key={item.id} id={`wish-${item.id}`} className="wl-cell">
+                <ProductCard
+                  product={item}
+                  wishlisted
+                  onToggleWishlist={handleRemove}
+                />
+
+                {/* Actions: add to cart + explicit remove-from-wishlist */}
+                <div className="wl-action-row">
+                  <CartButton
+                    productId={item.id}
+                    stock={item.stock}
+                    productTitle={item.title}
+                    id={`wish-cart-${item.id}`}
+                  />
                   <button
-                    onClick={(e) => { e.preventDefault(); handleRemove(item.id); }}
-                    style={heartBtnStyle}
-                    disabled={removingId === item.id}
+                    type="button"
+                    className="wl-remove-btn"
                     id={`remove-wish-${item.id}`}
                     title="Remove from wishlist"
+                    aria-label="Remove from wishlist"
+                    onClick={() => handleRemove(item.id)}
+                    disabled={removingIds.has(item.id)}
                   >
-                    {removingId === item.id ? (
-                      '…'
+                    {removingIds.has(item.id) ? (
+                      <Icon name="loader" size={14} className="wl-spin" />
                     ) : (
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="#ef4444" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-                      </svg>
+                      <IconTrash size={14} />
                     )}
                   </button>
                 </div>
-
-                {/* Body */}
-                <div style={cardBodyStyle}>
-                  <div style={cardCatStyle}>{item.category || 'General'}</div>
-                  <h3 style={cardTitleStyle}>{item.title}</h3>
-                  <div style={cardFootStyle}>
-                    <div>
-                      <div style={cardPriceStyle}>₹{Number(item.price).toFixed(2)}</div>
-                      <div style={cardSellerStyle}>by {item.seller_name}</div>
-                    </div>
-                    <CartButton
-                      productId={item.id}
-                      stock={item.stock}
-                      productTitle={item.title}
-                      id={`wish-cart-${item.id}`}
-                    />
-                  </div>
-                </div>
-              </Link>
+              </div>
             ))}
           </div>
         )}
-      </div>
 
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-        .wish-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.1) !important; }
-        #${items.map(i => `remove-wish-${i.id}`).join(':hover, #')}:hover { transform: scale(1.15); }
-        @keyframes spin { to { transform: rotate(360deg); } }
-      `}</style>
+        <style>{`
+          .wl-cell {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-width: 0;
+          }
+          .wl-cell > .product-card {
+            flex: 1;
+          }
+          .wl-action-row {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 8px;
+            padding: 0 2px;
+          }
+          .wl-remove-btn {
+            width: 34px;
+            height: 34px;
+            border-radius: 9999px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-secondary);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: all 0.15s ease;
+          }
+          .wl-remove-btn:hover:not(:disabled) {
+            color: var(--danger-strong);
+            border-color: var(--danger-border);
+            background: var(--danger-soft);
+          }
+          .wl-remove-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+          }
+          .wl-spin {
+            animation: wl-rotate 0.8s linear infinite;
+          }
+          @keyframes wl-rotate {
+            to { transform: rotate(360deg); }
+          }
+          @media (max-width: 768px) {
+            .wl-page {
+              padding-top: 20px;
+            }
+            .wl-action-row {
+              gap: 6px;
+            }
+          }
+          @media (max-width: 560px) {
+            .wl-action-row {
+              justify-content: space-between;
+            }
+            .wl-remove-btn {
+              width: 32px;
+              height: 32px;
+            }
+          }
+        `}</style>
+      </div>
     </AppLayout>
   );
 };
-
-// ── Styles ────────────────────────────────────────────────────────────────────
-
-const headingStyle: React.CSSProperties = { color: '#111827', fontSize: '24px', fontWeight: '700', margin: '0 0 4px 0' };
-const subStyle: React.CSSProperties = { color: '#6b7280', fontSize: '14px', margin: 0 };
-const headerRowStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' };
-const errorBoxStyle: React.CSSProperties = { padding: '16px', borderRadius: '10px', backgroundColor: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', fontSize: '14px', marginBottom: '16px' };
-const centerStyle: React.CSSProperties = { textAlign: 'center', padding: '60px 0' };
-const spinnerStyle: React.CSSProperties = { width: '32px', height: '32px', border: '3px solid #e5e7eb', borderTop: '3px solid #111827', borderRadius: '50%', margin: '0 auto', animation: 'spin 0.8s linear infinite' };
-const emptyCardStyle: React.CSSProperties = { backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '60px 24px', textAlign: 'center' };
-const browseBtnStyle: React.CSSProperties = { display: 'inline-block', padding: '10px 20px', borderRadius: '8px', backgroundColor: '#111827', color: '#ffffff', fontSize: '14px', fontWeight: '600', textDecoration: 'none' };
-const gridStyle: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: '16px' };
-const cardStyle: React.CSSProperties = { backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', overflow: 'hidden', textDecoration: 'none', display: 'flex', flexDirection: 'column', transition: 'transform 0.2s ease, box-shadow 0.2s ease', cursor: 'pointer' };
-const cardImageWrapStyle: React.CSSProperties = { position: 'relative', height: '170px', overflow: 'hidden' };
-const cardImageStyle: React.CSSProperties = { width: '100%', height: '100%', objectFit: 'cover' };
-const cardNoImageStyle: React.CSSProperties = { width: '100%', height: '100%', backgroundColor: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center' };
-const condBadgeStyle: React.CSSProperties = { position: 'absolute', top: '8px', left: '8px', padding: '2px 8px', borderRadius: '4px', color: '#ffffff', fontSize: '10px', fontWeight: '700', letterSpacing: '0.05em' };
-const heartBtnStyle: React.CSSProperties = { position: 'absolute', top: '8px', right: '8px', background: 'rgba(255,255,255,0.9)', border: 'none', borderRadius: '50%', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '14px', transition: 'transform 0.15s ease', boxShadow: '0 1px 4px rgba(0,0,0,0.15)' };
-const cardBodyStyle: React.CSSProperties = { padding: '14px', display: 'flex', flexDirection: 'column', flex: 1, gap: '4px' };
-const cardCatStyle: React.CSSProperties = { fontSize: '11px', fontWeight: '600', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' };
-const cardTitleStyle: React.CSSProperties = { fontSize: '14px', fontWeight: '600', color: '#111827', margin: '2px 0 4px 0', lineHeight: '1.35', height: '38px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' };
-const cardFootStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: '10px' };
-const cardPriceStyle: React.CSSProperties = { fontSize: '16px', fontWeight: '800', color: '#111827', display: 'flex', alignItems: 'center' };
-const cardSellerStyle: React.CSSProperties = { fontSize: '11px', color: '#9ca3af', marginTop: '2px' };
 
 export default WishlistPage;

@@ -7,6 +7,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { APP_NAME, APP_TAGLINE } from '../../config/appConfig';
+import { IconMail, IconPhone, IconClock, IconLock } from '../UI/Icons';
 
 const Footer: React.FC = () => {
   return (
@@ -15,8 +16,13 @@ const Footer: React.FC = () => {
         {/* Column 1: Brand & About */}
         <div style={colStyle}>
           <div style={brandHeaderStyle}>
+            <span style={logoMarkStyle}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                <polyline points="9 22 9 12 15 12 15 22" />
+              </svg>
+            </span>
             <span style={logoTextStyle}>{APP_NAME}</span>
-            <span style={dotStyle}>●</span>
           </div>
           <p style={taglineStyle}>{APP_TAGLINE}</p>
           <p style={descStyle}>
@@ -95,12 +101,7 @@ const Footer: React.FC = () => {
         <div style={colStyle}>
           <h4 style={headingStyle}>Customer Support</h4>
           <div style={contactItemStyle}>
-            <span style={contactIconWrapStyle}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                <polyline points="22,6 12,13 2,6"/>
-              </svg>
-            </span>
+            <span style={contactIconWrapStyle}><IconMail size={13} color="var(--text-muted)" /></span>
             <div>
               <div style={contactLabelStyle}>Support Email</div>
               <a href="mailto:lavanyamyadawad@gmail.com" style={contactLinkStyle}>
@@ -110,11 +111,7 @@ const Footer: React.FC = () => {
           </div>
 
           <div style={contactItemStyle}>
-            <span style={contactIconWrapStyle}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-              </svg>
-            </span>
+            <span style={contactIconWrapStyle}><IconPhone size={13} color="var(--text-muted)" /></span>
             <div>
               <div style={contactLabelStyle}>Helpdesk / Phone</div>
               <a href="tel:+919019301641" style={contactLinkStyle}>
@@ -124,12 +121,7 @@ const Footer: React.FC = () => {
           </div>
 
           <div style={contactItemStyle}>
-            <span style={contactIconWrapStyle}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10"/>
-                <polyline points="12 6 12 12 16 14"/>
-              </svg>
-            </span>
+            <span style={contactIconWrapStyle}><IconClock size={13} color="var(--text-muted)" /></span>
             <div>
               <div style={contactLabelStyle}>Support Hours</div>
               <span style={{ fontSize: '12px', color: '#4b5563', fontWeight: 500 }}>
@@ -140,10 +132,7 @@ const Footer: React.FC = () => {
 
           <div style={securityBoxStyle}>
             <div style={securityHeaderStyle}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#111827" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-              </svg>
+              <IconLock size={12} color="var(--text)" strokeWidth={2.2} />
               <span>100% SECURE PAYMENTS</span>
             </div>
             <div style={{ fontSize: '12px', color: '#111827', fontWeight: 700 }}>
@@ -217,7 +206,18 @@ const colStyle: React.CSSProperties = {
 const brandHeaderStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
-  gap: '6px',
+  gap: '8px',
+};
+
+const logoMarkStyle: React.CSSProperties = {
+  width: 24,
+  height: 24,
+  borderRadius: 7,
+  background: 'var(--brand-gradient, linear-gradient(135deg, #4f46e5, #7c3aed))',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  flexShrink: 0,
 };
 
 const logoTextStyle: React.CSSProperties = {
@@ -225,11 +225,6 @@ const logoTextStyle: React.CSSProperties = {
   fontWeight: 800,
   letterSpacing: '-0.03em',
   color: '#111827',
-};
-
-const dotStyle: React.CSSProperties = {
-  color: '#111827',
-  fontSize: '18px',
 };
 
 const taglineStyle: React.CSSProperties = {

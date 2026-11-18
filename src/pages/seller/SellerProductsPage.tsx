@@ -1,5 +1,7 @@
 // ============================================================
-// LAVSA — Seller Products Page (manage & upload listings)
+// LAVSA � Seller Products Page (manage & upload listings)
+// Redesigned: clean listing creation, image upload, form sections,
+// helpful validation and feedback.
 // ============================================================
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -14,8 +16,10 @@ import {
   deleteProduct,
   Product,
 } from '../../services/productService';
+import { Button, Card, Input, Textarea, Select, Label, EmptyState, ErrorBanner, Badge, PageHeader } from '../../components/UI/ui';
+import { CONDITION_OPTIONS, getConditionMeta } from '../../utils/conditions';
+import { IconImage, IconUpload } from '../../components/UI/Icons';
 
-const CONDITIONS = ['NEW', 'LIKE_NEW', 'GOOD', 'FAIR', 'POOR'];
 const CATEGORIES = ['Electronics', 'Books', 'Clothing', 'Furniture', 'Sports', 'Other'];
 
 interface ProductForm {
@@ -49,16 +53,20 @@ const SellerProductsPage: React.FC = () => {
   const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
+  const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-      alert('Only JPEG, PNG, and WebP images are supported.');
+      showToast('Only JPEG, PNG, and WebP images are supported.', 'error');
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      alert('File size exceeds 5MB limit.');
+      showToast('File size exceeds 5MB limit.', 'error');
       return;
     }
 
@@ -66,17 +74,14 @@ const SellerProductsPage: React.FC = () => {
       setUploadingImage(true);
       const url = await uploadService.uploadImage(file);
       setForm((prev) => ({ ...prev, image_url: url }));
+      showToast('Image uploaded successfully.', 'success');
     } catch (err: any) {
-      alert(err?.response?.data?.message || 'Failed to upload image.');
+      showToast(err?.response?.data?.message || 'Failed to upload image.', 'error');
     } finally {
       setUploadingImage(false);
     }
   };
-  const [error, setError] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
-  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
 
-  // Auto-dismiss alerts after 4 seconds
   useEffect(() => {
     if (error) {
       const timer = setTimeout(() => setError(''), 4000);
@@ -107,615 +112,263 @@ const SellerProductsPage: React.FC = () => {
     fetchMyProducts();
   }, [fetchMyProducts]);
 
-  const handleFormChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-  ) => {
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  };
-
-  const openAddForm = () => {
-    setForm(emptyForm);
-    setEditingId(null);
-    setShowForm(true);
-    setError('');
-    setSuccessMsg('');
-  };
-
-  const openEditForm = (product: Product) => {
-    setForm({
-      title: product.title,
-      description: product.description || '',
-      price: String(product.price),
-      category: product.category || 'Other',
-      condition: product.condition || 'GOOD',
-      image_url: product.image_url || '',
-      stock: String(product.stock),
-    });
-    setEditingId(product.id);
-    setShowForm(true);
-    setError('');
-    setSuccessMsg('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (!form.title.trim()) { setError('Product title is required.'); return; }
+    if (!form.description.trim()) { setError('Description is required.'); return; }
+    if (!form.price.trim() || Number(form.price) <= 0) { setError('Valid price is required.'); return; }
+    if (!form.category) { setError('Please select a category.'); return; }
+    if (!form.image_url) { setError('Please upload a product image.'); return; }
+    if (!form.stock.trim() || Number(form.stock) < 1) { setError('Valid stock quantity is required.'); return; }
+
     setIsSubmitting(true);
     try {
       const payload = {
         title: form.title.trim(),
-        description: form.description.trim() || undefined,
-        price: parseFloat(form.price),
-        category: form.category || undefined,
-        condition: form.condition || undefined,
-        image_url: form.image_url.trim() || undefined,
-        stock: parseInt(form.stock, 10) || 1,
+        description: form.description.trim(),
+        price: Number(form.price),
+        category: form.category,
+        condition: form.condition,
+        image_url: form.image_url,
+        stock: Number(form.stock),
       };
 
       if (editingId) {
         await updateProduct(editingId, payload);
-        const msg = 'Product updated!';
-        setSuccessMsg(msg);
-        showToast(msg, 'success');
+        showToast('Product updated successfully.', 'success');
       } else {
         await createProduct(payload);
-        const msg = 'Product listed successfully!';
-        setSuccessMsg(msg);
-        showToast(msg, 'success');
+        showToast('Product listed successfully.', 'success');
       }
 
-      setShowForm(false);
+      setForm(emptyForm);
       setEditingId(null);
-      fetchMyProducts();
+      setShowForm(false);
+      await fetchMyProducts();
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Failed to save product.';
-      setError(msg);
-      showToast(msg, 'error');
+      setError(err?.response?.data?.message || 'Failed to save product. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const promptDelete = (product: Product) => {
+  const handleEdit = (product: Product) => {
+    setEditingId(product.id);
+    setForm({
+      title: product.title,
+      description: product.description ?? '',
+      price: String(product.price),
+      category: product.category ?? 'Other',
+      condition: product.condition ?? 'GOOD',
+      image_url: product.image_url ?? '',
+      stock: String(product.stock),
+    });
+    setShowForm(true);
+  };
+
+  const handleDelete = (product: Product) => {
     setProductToDelete(product);
   };
 
-  const confirmDelete = async () => {
+  const confirmDelete = () => {
     if (!productToDelete) return;
-    try {
-      await deleteProduct(productToDelete.id);
-      setProducts((prev) => prev.filter((p) => p.id !== productToDelete.id));
-      const msg = `"${productToDelete.title}" deleted.`;
-      setSuccessMsg(msg);
-      showToast(msg, 'success');
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Failed to delete product.';
-      setError(msg);
-      showToast(msg, 'error');
-    } finally {
-      setProductToDelete(null);
-    }
+    deleteProduct(productToDelete.id)
+      .then(() => {
+        showToast('Product deleted successfully.', 'success');
+        setProducts((prev) => prev.filter((p) => p.id !== productToDelete!.id));
+      })
+      .catch(() => showToast('Failed to delete product.', 'error'))
+      .finally(() => setProductToDelete(null));
   };
 
-  const handleToggleActive = async (product: Product) => {
-    try {
-      await updateProduct(product.id, { is_active: !product.is_active });
-      setProducts((prev) =>
-        prev.map((p) => (p.id === product.id ? { ...p, is_active: !p.is_active } : p))
-      );
-      showToast(
-        product.is_active ? `"${product.title}" is now hidden.` : `"${product.title}" is now active.`,
-        'info'
-      );
-    } catch {
-      const msg = 'Failed to update listing status.';
-      setError(msg);
-      showToast(msg, 'error');
-    }
-  };
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}>
+          <div className="page-loader"><span>Loading your listings...</span></div>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  const conditionMeta = getConditionMeta(form.condition);
 
   return (
     <AppLayout>
-      <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-        {/* Header */}
-        <div style={headerRowStyle}>
-          <div>
-            <h1 style={headingStyle}>My Listings</h1>
-            <p style={subStyle}>
-              {products.length} product{products.length !== 1 ? 's' : ''} listed
-            </p>
-          </div>
-          <button onClick={openAddForm} style={addBtnStyle} id="add-product-btn">
-            + Add Product
-          </button>
-        </div>
+      <div className="page seller-products-page">
+        <PageHeader
+          title="My Listings"
+          subtitle="Manage your campus marketplace products"
+          icon="store"
+          actions={
+            <Button variant="primary" size="md" icon="plus" onClick={() => { setForm(emptyForm); setEditingId(null); setShowForm(true); }}>
+              New Listing
+            </Button>
+          }
+        />
 
-        {/* Alerts */}
-        {successMsg && (
-          <div style={successAlertStyle}>
-            ✅ {successMsg}
-            <button onClick={() => setSuccessMsg('')} style={alertCloseStyle}>✕</button>
+        {error && <ErrorBanner message={error} />}
+
+        {!showForm && products.length === 0 && (
+          <EmptyState
+            icon="store"
+            title="No listings yet"
+            description="Start selling on campus by creating your first product listing."
+            action={
+              <Button variant="primary" size="md" icon="plus" onClick={() => { setForm(emptyForm); setEditingId(null); setShowForm(true); }}>
+                Create Listing
+              </Button>
+            }
+          />
+        )}
+
+        {!showForm && products.length > 0 && (
+          <div className="listings-grid">
+            {products.map((product) => {
+              const condition = getConditionMeta(product.condition);
+              const outOfStock = product.stock <= 0;
+              return (
+                <div key={product.id} className="listing-card">
+                  <div className="listing-image">
+                    {product.image_url ? (
+                      <img src={product.image_url} alt={product.title} className="listing-img" />
+                    ) : (
+                      <div className="listing-placeholder"><IconImage size={32} /></div>
+                    )}
+                    <span className={`listing-condition-badge ${condition.badgeClass}`}>{condition.label}</span>
+                    {outOfStock && (
+                      <div className="listing-sold-out">
+                        <span className="badge badge-dark">Sold out</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="listing-body">
+                    <h3 className="listing-title">{product.title}</h3>
+                    <span className="listing-price">?{product.price.toLocaleString('en-IN')}</span>
+                    <div className="listing-meta">
+                      <span className="listing-category">{product.category}</span>
+                      <span className="listing-stock">{product.stock} in stock</span>
+                    </div>
+                  </div>
+                  <div className="listing-actions">
+                    <Button variant="ghost" size="sm" icon="edit" onClick={() => handleEdit(product)} />
+                    <Button variant="danger-soft" size="sm" icon="trash" onClick={() => handleDelete(product)} />
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
-        {error && (
-          <div style={errorAlertStyle}>
-            ⚠️ {error}
-            <button onClick={() => setError('')} style={alertCloseStyle}>✕</button>
-          </div>
-        )}
 
-        {/* Add / Edit Form */}
         {showForm && (
-          <div style={formOverlayStyle}>
-            <div style={formCardStyle}>
-              <div style={formHeaderStyle}>
-                <h2 style={formTitleStyle}>
-                  {editingId ? 'Edit Product' : 'List a New Product'}
-                </h2>
-                <button onClick={() => setShowForm(false)} style={formCloseStyle} id="close-product-form">
-                  ✕
-                </button>
-              </div>
+          <Card padded className="listing-form-card">
+            <div className="form-header">
+              <h2>{editingId ? 'Edit Listing' : 'Create New Listing'}</h2>
+              <Button variant="ghost" size="sm" icon="x" onClick={() => { setForm(emptyForm); setEditingId(null); setShowForm(false); }} />
+            </div>
 
-              <form onSubmit={handleSubmit} style={formBodyStyle}>
-                <div style={formGridStyle}>
-                  <div style={fieldStyle}>
-                    <label style={labelStyle}>Title *</label>
-                    <input
-                      name="title"
-                      value={form.title}
-                      onChange={handleFormChange}
-                      placeholder="Product title"
-                      style={inputStyle}
-                      required
-                      id="product-title"
-                    />
+            <form onSubmit={handleSubmit} className="listing-form">
+              <div className="form-section">
+                <h3 className="form-section-title">Product Details</h3>
+                <div className="form-row full">
+                  <label htmlFor="title" className="label">Product Title</label>
+                  <Input id="title" name="title" value={form.title} onChange={handleFormChange} placeholder="e.g. iPhone 12, Calculus Textbook" required />
+                </div>
+                <div className="form-row full">
+                  <label htmlFor="description" className="label">Description</label>
+                  <Textarea id="description" name="description" value={form.description} onChange={handleFormChange} rows={4} placeholder="Describe the product condition, features, and any flaws..." required />
+                </div>
+                <div className="form-row two-col">
+                  <div className="form-group">
+                    <label htmlFor="price" className="label">Price (₹)</label>
+                    <Input id="price" name="price" type="number" value={form.price} onChange={handleFormChange} required />
                   </div>
-                  <div style={fieldStyle}>
-                    <label style={labelStyle}>Price (₹) *</label>
-                    <input
-                      name="price"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={form.price}
-                      onChange={handleFormChange}
-                      placeholder="0.00"
-                      style={inputStyle}
-                      required
-                      id="product-price"
-                    />
+                  <div className="form-group">
+                    <label htmlFor="stock" className="label">Stock Quantity</label>
+                    <Input id="stock" name="stock" type="number" value={form.stock} onChange={handleFormChange} required />
                   </div>
-                  <div style={fieldStyle}>
-                    <label style={labelStyle}>Category</label>
-                    <select
-                      name="category"
-                      value={form.category}
-                      onChange={handleFormChange}
-                      style={inputStyle}
-                      id="product-category"
-                    >
+                </div>
+                <div className="form-row two-col">
+                  <div className="form-group">
+                    <Label htmlFor="category">Category</Label>
+                    <Select id="category" name="category" value={form.category} onChange={handleFormChange} required>
                       {CATEGORIES.map((c) => (
                         <option key={c} value={c}>{c}</option>
                       ))}
-                    </select>
+                    </Select>
                   </div>
-                  <div style={fieldStyle}>
-                    <label style={labelStyle}>Condition</label>
-                    <select
-                      name="condition"
-                      value={form.condition}
-                      onChange={handleFormChange}
-                      style={inputStyle}
-                      id="product-condition"
-                    >
-                      {CONDITIONS.map((c) => (
-                        <option key={c} value={c}>{c.replace('_', ' ')}</option>
+                  <div className="form-group">
+                    <Label htmlFor="condition">Condition</Label>
+                    <Select id="condition" name="condition" value={form.condition} onChange={handleFormChange} required>
+                      {CONDITION_OPTIONS.map((c) => (
+                        <option key={c.value} value={c.value}>{c.label}</option>
                       ))}
-                    </select>
+                    </Select>
                   </div>
-                  <div style={fieldStyle}>
-                    <label style={labelStyle}>Stock Quantity</label>
-                    <input
-                      name="stock"
-                      type="number"
-                      min="1"
-                      value={form.stock}
-                      onChange={handleFormChange}
-                      style={inputStyle}
-                      id="product-stock"
-                    />
-                  </div>
-                  <div style={fieldStyle}>
-                    <label style={labelStyle}>Product Image</label>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                      <input
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        ref={fileInputRef}
-                        style={{ display: 'none' }}
-                        onChange={handleFileUpload}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={uploadingImage}
-                        style={{
-                          backgroundColor: '#f3f4f6',
-                          border: '1px solid #d1d5db',
-                          borderRadius: '6px',
-                          padding: '7px 12px',
-                          fontSize: '12px',
-                          fontWeight: '600',
-                          color: '#111827',
-                          cursor: uploadingImage ? 'not-allowed' : 'pointer',
-                        }}
-                      >
-                        {uploadingImage ? 'Uploading...' : '📁 Choose File from Device'}
-                      </button>
+                </div>
+                <div className="condition-preview">
+                  <Badge color={conditionMeta.color}>{conditionMeta.label}</Badge>
+                </div>
+              </div>
 
-                      {form.image_url && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <img
-                            src={form.image_url}
-                            alt="preview"
-                            style={{ width: '32px', height: '32px', borderRadius: '4px', objectFit: 'cover' }}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setForm((prev) => ({ ...prev, image_url: '' }))}
-                            style={{
-                              backgroundColor: 'transparent',
-                              border: 'none',
-                              color: '#ef4444',
-                              fontSize: '11px',
-                              cursor: 'pointer',
-                              fontWeight: '500',
-                            }}
-                          >
-                            ✕ Remove
-                          </button>
-                        </div>
-                      )}
+              <div className="form-section">
+                <h3 className="form-section-title">Product Image</h3>
+                <div className="image-upload-section">
+                  {form.image_url ? (
+                    <div className="image-preview">
+                      <img src={form.image_url} alt="Preview" className="preview-img" />
+                      <Button variant="danger-soft" size="sm" icon="trash" onClick={() => setForm((prev) => ({ ...prev, image_url: '' }))} />
                     </div>
-                    <input
-                      name="image_url"
-                      type="url"
-                      value={form.image_url}
-                      onChange={handleFormChange}
-                      placeholder="Or paste image URL (https://...)"
-                      style={inputStyle}
-                      id="product-image-url"
-                    />
-                  </div>
-                </div>
-                <div style={fieldStyle}>
-                  <label style={labelStyle}>Description</label>
-                  <textarea
-                    name="description"
-                    value={form.description}
-                    onChange={handleFormChange}
-                    placeholder="Describe your product..."
-                    style={{ ...inputStyle, height: '80px', resize: 'vertical' } as React.CSSProperties}
-                    id="product-description"
-                  />
-                </div>
-
-                {error && <div style={formErrorStyle}>{error}</div>}
-
-                <div style={formActionsStyle}>
-                  <button
-                    type="button"
-                    onClick={() => setShowForm(false)}
-                    style={cancelBtnStyle}
-                    id="cancel-product-form"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    style={submitBtnStyle}
-                    disabled={isSubmitting}
-                    id="submit-product-form"
-                  >
-                    {isSubmitting ? 'Saving...' : editingId ? 'Save Changes' : 'List Product'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* Loading */}
-        {isLoading && (
-          <div style={centerStyle}>
-            <div style={spinnerStyle} />
-            <p style={{ color: '#6b7280', marginTop: '12px' }}>Loading your listings...</p>
-          </div>
-        )}
-
-        {/* Empty state */}
-        {!isLoading && products.length === 0 && (
-          <div style={emptyStyle}>
-            <span style={{ fontSize: '48px' }}>🏷️</span>
-            <h3 style={{ color: '#374151', margin: '12px 0 8px 0' }}>No products listed yet</h3>
-            <p style={{ color: '#9ca3af', fontSize: '14px', marginBottom: '20px' }}>
-              Start by adding your first product listing!
-            </p>
-            <button onClick={openAddForm} style={addBtnStyle} id="add-first-product-btn">
-              + Add Your First Product
-            </button>
-          </div>
-        )}
-
-        {/* Products table */}
-        {!isLoading && products.length > 0 && (
-          <div style={tableWrapStyle}>
-            <table style={tableStyle}>
-              <thead>
-                <tr>
-                  {['Product', 'Category', 'Condition', 'Price', 'Stock', 'Status', 'Actions'].map(
-                    (h) => (
-                      <th key={h} style={thStyle}>{h}</th>
-                    )
+                  ) : (
+                    <div className="image-dropzone" onClick={() => fileInputRef.current?.click()}>
+                      <IconUpload size={28} />
+                      <p>Click to upload product image</p>
+                      <span className="dropzone-hint">JPEG, PNG, WebP � Max 5MB</span>
+                    </div>
                   )}
-                </tr>
-              </thead>
-              <tbody>
-                {products.map((product) => (
-                  <tr key={product.id} style={trStyle} id={`product-row-${product.id}`}>
-                    <td style={tdStyle}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        {product.image_url ? (
-                          <img src={product.image_url} alt={product.title} style={thumbStyle} />
-                        ) : (
-                          <div style={thumbPlaceholderStyle}>📦</div>
-                        )}
-                        <div>
-                          <div style={{ fontWeight: '600', color: '#111827', fontSize: '13px' }}>
-                            {product.title}
-                          </div>
-                          {product.description && (
-                            <div style={{ color: '#9ca3af', fontSize: '11px' }}>
-                              {product.description.slice(0, 50)}{product.description.length > 50 ? '…' : ''}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                    <td style={tdStyle}>
-                      <span style={categoryChipStyle}>{product.category || '—'}</span>
-                    </td>
-                    <td style={tdStyle}>
-                      <span style={{ fontSize: '12px', color: '#6b7280' }}>
-                        {product.condition?.replace('_', ' ') || '—'}
-                      </span>
-                    </td>
-                    <td style={tdStyle}>
-                      <span style={{ fontWeight: '700', color: '#111827' }}>
-                        ₹{Number(product.price).toFixed(2)}
-                      </span>
-                    </td>
-                    <td style={tdStyle}>
-                      <span style={{ fontSize: '13px', color: Number(product.stock) < 3 ? '#dc2626' : '#111827' }}>
-                        {product.stock}
-                      </span>
-                    </td>
-                    <td style={tdStyle}>
-                      <button
-                        onClick={() => handleToggleActive(product)}
-                        style={statusToggleStyle(product.is_active !== false)}
-                        id={`toggle-active-${product.id}`}
-                      >
-                        {product.is_active !== false ? '● Active' : '○ Hidden'}
-                      </button>
-                    </td>
-                    <td style={tdStyle}>
-                      <div style={{ display: 'flex', gap: '6px' }}>
-                        <button
-                          onClick={() => openEditForm(product)}
-                          style={editBtnStyle}
-                          id={`edit-product-${product.id}`}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => promptDelete(product)}
-                          style={deleteBtnStyle}
-                          id={`delete-product-${product.id}`}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={handleFileUpload}
+                    disabled={uploadingImage}
+                    style={{ display: 'none' }}
+                  />
+                  {uploadingImage && <span className="uploading-hint">Uploading image...</span>}
+                </div>
+              </div>
+
+              <div className="form-actions">
+                <Button variant="ghost" size="md" onClick={() => { setForm(emptyForm); setEditingId(null); setShowForm(false); }} disabled={isSubmitting}>
+                  Cancel
+                </Button>
+                <Button variant="primary" size="md" type="submit" disabled={isSubmitting} loading={isSubmitting}>
+                  {editingId ? 'Update Listing' : 'Publish Listing'}
+                </Button>
+              </div>
+            </form>
+          </Card>
         )}
 
-        {/* In-Website Confirmation Modal for Deletion */}
         <ConfirmModal
           isOpen={!!productToDelete}
           title="Delete Listing"
-          message={`Are you sure you want to delete "${productToDelete?.title}"? This listing will be permanently removed.`}
-          confirmLabel="Delete Listing"
-          cancelLabel="Keep Listing"
+          message={`Are you sure you want to delete "${productToDelete?.title}"? This cannot be undone.`}
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
           isDanger={true}
           onConfirm={confirmDelete}
           onCancel={() => setProductToDelete(null)}
         />
       </div>
-
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-        #add-product-btn:hover, #add-first-product-btn:hover { background-color: #374151 !important; }
-        #submit-product-form:hover:not(:disabled) { background-color: #374151 !important; }
-        input:focus, textarea:focus, select:focus { outline: none; border-color: #111827 !important; box-shadow: 0 0 0 3px rgba(17,24,39,0.08); }
-      `}</style>
     </AppLayout>
   );
-};
-
-// ── Styles ────────────────────────────────────────────────────────────────────
-
-const headingStyle: React.CSSProperties = { color: '#111827', fontSize: '24px', fontWeight: '700', margin: '0 0 4px 0' };
-const subStyle: React.CSSProperties = { color: '#6b7280', fontSize: '14px', margin: 0 };
-
-const headerRowStyle: React.CSSProperties = {
-  display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '20px',
-};
-
-const addBtnStyle: React.CSSProperties = {
-  padding: '10px 20px', borderRadius: '8px', border: 'none',
-  backgroundColor: '#111827', color: '#ffffff', fontSize: '14px', fontWeight: '600',
-  cursor: 'pointer', transition: 'background-color 0.15s ease',
-  fontFamily: "'Inter', system-ui, sans-serif",
-};
-
-const successAlertStyle: React.CSSProperties = {
-  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-  padding: '12px 16px', borderRadius: '8px', backgroundColor: '#f0fdf4',
-  border: '1px solid #bbf7d0', color: '#166534', fontSize: '13px', marginBottom: '16px',
-};
-
-const errorAlertStyle: React.CSSProperties = {
-  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-  padding: '12px 16px', borderRadius: '8px', backgroundColor: '#fef2f2',
-  border: '1px solid #fecaca', color: '#dc2626', fontSize: '13px', marginBottom: '16px',
-};
-
-const alertCloseStyle: React.CSSProperties = {
-  background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', color: 'inherit',
-};
-
-const formOverlayStyle: React.CSSProperties = {
-  position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)',
-  display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200,
-  padding: '20px',
-};
-
-const formCardStyle: React.CSSProperties = {
-  backgroundColor: '#ffffff', borderRadius: '16px',
-  boxShadow: '0 20px 60px rgba(0,0,0,0.2)', width: '100%', maxWidth: '680px',
-  maxHeight: '90vh', overflowY: 'auto',
-};
-
-const formHeaderStyle: React.CSSProperties = {
-  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-  padding: '20px 24px', borderBottom: '1px solid #f3f4f6',
-};
-
-const formTitleStyle: React.CSSProperties = {
-  fontSize: '18px', fontWeight: '700', color: '#111827', margin: 0,
-};
-
-const formCloseStyle: React.CSSProperties = {
-  background: 'none', border: 'none', color: '#9ca3af', fontSize: '16px', cursor: 'pointer',
-};
-
-const formBodyStyle: React.CSSProperties = { padding: '24px' };
-
-const formGridStyle: React.CSSProperties = {
-  display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px',
-};
-
-const fieldStyle: React.CSSProperties = { marginBottom: '0' };
-
-const labelStyle: React.CSSProperties = {
-  display: 'block', fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em',
-};
-
-const inputStyle: React.CSSProperties = {
-  width: '100%', padding: '10px 12px', borderRadius: '8px',
-  border: '1.5px solid #e5e7eb', backgroundColor: '#f9fafb', color: '#111827',
-  fontSize: '14px', fontFamily: "'Inter', system-ui, sans-serif", boxSizing: 'border-box',
-  transition: 'border-color 0.15s ease',
-};
-
-const formErrorStyle: React.CSSProperties = {
-  padding: '10px 14px', borderRadius: '8px', backgroundColor: '#fef2f2',
-  border: '1px solid #fecaca', color: '#dc2626', fontSize: '13px', marginBottom: '12px',
-};
-
-const formActionsStyle: React.CSSProperties = {
-  display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px',
-};
-
-const cancelBtnStyle: React.CSSProperties = {
-  padding: '10px 20px', borderRadius: '8px', border: '1px solid #e5e7eb',
-  backgroundColor: '#ffffff', color: '#6b7280', fontSize: '14px', cursor: 'pointer',
-  fontFamily: "'Inter', system-ui, sans-serif",
-};
-
-const submitBtnStyle: React.CSSProperties = {
-  padding: '10px 24px', borderRadius: '8px', border: 'none',
-  backgroundColor: '#111827', color: '#ffffff', fontSize: '14px', fontWeight: '600',
-  cursor: 'pointer', transition: 'background-color 0.15s ease',
-  fontFamily: "'Inter', system-ui, sans-serif",
-};
-
-const centerStyle: React.CSSProperties = { textAlign: 'center', padding: '60px 0' };
-
-const spinnerStyle: React.CSSProperties = {
-  width: '32px', height: '32px', border: '3px solid #e5e7eb',
-  borderTop: '3px solid #111827', borderRadius: '50%', margin: '0 auto',
-  animation: 'spin 0.8s linear infinite',
-};
-
-const emptyStyle: React.CSSProperties = { textAlign: 'center', padding: '60px 0' };
-
-const tableWrapStyle: React.CSSProperties = {
-  backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', overflow: 'hidden',
-};
-
-const tableStyle: React.CSSProperties = { width: '100%', borderCollapse: 'collapse' };
-
-const thStyle: React.CSSProperties = {
-  padding: '12px 16px', textAlign: 'left', fontSize: '11px', fontWeight: '600',
-  color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em',
-  borderBottom: '1px solid #f3f4f6', backgroundColor: '#f9fafb',
-};
-
-const trStyle: React.CSSProperties = { borderBottom: '1px solid #f9fafb' };
-
-const tdStyle: React.CSSProperties = {
-  padding: '14px 16px', fontSize: '13px', verticalAlign: 'middle',
-};
-
-const thumbStyle: React.CSSProperties = {
-  width: '40px', height: '40px', objectFit: 'cover', borderRadius: '6px', flexShrink: 0,
-};
-
-const thumbPlaceholderStyle: React.CSSProperties = {
-  width: '40px', height: '40px', borderRadius: '6px', backgroundColor: '#f3f4f6',
-  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0,
-};
-
-const categoryChipStyle: React.CSSProperties = {
-  display: 'inline-block', padding: '2px 8px', borderRadius: '4px',
-  backgroundColor: '#f3f4f6', color: '#6b7280', fontSize: '11px',
-};
-
-const statusToggleStyle = (active: boolean): React.CSSProperties => ({
-  padding: '3px 10px', borderRadius: '12px', border: 'none', cursor: 'pointer',
-  backgroundColor: active ? '#f0fdf4' : '#f3f4f6',
-  color: active ? '#166534' : '#6b7280',
-  fontSize: '11px', fontWeight: '600',
-  fontFamily: "'Inter', system-ui, sans-serif",
-});
-
-const editBtnStyle: React.CSSProperties = {
-  padding: '5px 12px', borderRadius: '6px', border: '1px solid #e5e7eb',
-  backgroundColor: '#ffffff', color: '#374151', fontSize: '12px', cursor: 'pointer',
-  fontFamily: "'Inter', system-ui, sans-serif",
-};
-
-const deleteBtnStyle: React.CSSProperties = {
-  padding: '5px 12px', borderRadius: '6px', border: 'none',
-  backgroundColor: '#fef2f2', color: '#dc2626', fontSize: '12px', cursor: 'pointer',
-  fontFamily: "'Inter', system-ui, sans-serif",
 };
 
 export default SellerProductsPage;

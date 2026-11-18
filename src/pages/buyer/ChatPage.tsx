@@ -2,7 +2,8 @@
 // LAVSA — ChatPage
 // Buyer-seller chat tied to a specific order.
 // Accessed via /chat/:orderId
-// Real-time bidirectional messaging powered by Socket.IO
+// Real-time bidirectional messaging powered by Socket.IO.
+// Redesigned with the LAVSA design system (global.css + UI kit).
 // ============================================================
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
@@ -11,6 +12,11 @@ import { io, Socket } from 'socket.io-client';
 import AppLayout from '../../components/Layout/AppLayout';
 import api from '../../services/api';
 import { API_BASE_URL, AUTH_TOKEN_KEY } from '../../config/appConfig';
+import { Button, Card, Badge, ErrorBanner, Spinner } from '../../components/UI/ui';
+import {
+  IconArrowLeft,
+  IconMessageCircle,
+} from '../../components/UI/Icons';
 
 interface ChatMessage {
   id: string;
@@ -24,20 +30,21 @@ interface ChatMessage {
 
 const SOCKET_URL = API_BASE_URL.replace(/\/api\/?$/, '');
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
 function formatTime(iso: string) {
   const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
 function formatDate(iso: string) {
   const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
   return d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
 function dayLabel(iso: string) {
   const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return 'Today';
   const today = new Date();
   const yesterday = new Date();
   yesterday.setDate(today.getDate() - 1);
@@ -45,8 +52,6 @@ function dayLabel(iso: string) {
   if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
   return formatDate(iso);
 }
-
-// ── Component ─────────────────────────────────────────────────────────────────
 
 const ChatPage: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
@@ -57,6 +62,8 @@ const ChatPage: React.FC = () => {
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState('');
   const [myId, setMyId] = useState<string | null>(null);
+  const [socketConnected, setSocketConnected] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(true);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -64,10 +71,13 @@ const ChatPage: React.FC = () => {
 
   // ── Fetch current user ───────────────────────────────────────────────────
   useEffect(() => {
-    api.get<{ user: { id: string; role: string } }>('/auth/me').then((res) => {
-      const u = (res.data as any)?.user || res.data;
-      setMyId(u.id);
-    });
+    api
+      .get<{ user: { id: string; role: string } }>('/auth/me')
+      .then((res) => {
+        const u = (res.data as any)?.user || res.data;
+        setMyId(u.id);
+      })
+      .catch(() => {});
   }, []);
 
   // ── Scroll to bottom on new messages ────────────────────────────────────
@@ -78,19 +88,20 @@ const ChatPage: React.FC = () => {
   // ── Initial fetch of message history ─────────────────────────────────────
   const fetchMessages = useCallback(() => {
     if (!orderId) return;
+    setLoadingHistory(true);
     api
       .get<{ messages: ChatMessage[] }>(`/chat/${orderId}`)
-      .then((res) => setMessages(res.data.messages))
-      .catch(() => {});
+      .then((res) => setMessages(res.data.messages || []))
+      .catch(() => setError('Could not load chat history.'))
+      .finally(() => setLoadingHistory(false));
   }, [orderId]);
 
-  // ── Real-time Socket.IO Connection (replaces HTTP polling) ───────────────
+  // ── Real-time Socket.IO Connection ───────────────────────────────────────
   useEffect(() => {
     fetchMessages();
 
     if (!orderId) return;
 
-    // Establish WebSocket connection with JWT auth
     const token = localStorage.getItem(AUTH_TOKEN_KEY);
     const socket = io(SOCKET_URL, {
       transports: ['websocket', 'polling'],
@@ -100,10 +111,14 @@ const ChatPage: React.FC = () => {
     socketRef.current = socket;
 
     socket.on('connect', () => {
+      setSocketConnected(true);
       socket.emit('join_order', { orderId });
     });
 
-    // Listen for incoming real-time messages from other party
+    socket.on('disconnect', () => {
+      setSocketConnected(false);
+    });
+
     socket.on('new_message', (incomingMsg: ChatMessage) => {
       setMessages((prev) => {
         if (prev.some((m) => m.id === incomingMsg.id)) return prev;
@@ -112,7 +127,7 @@ const ChatPage: React.FC = () => {
     });
 
     socket.on('order_error', (err: { message?: string }) => {
-      setError(err?.message || 'Access denied to this order.');
+      setError(err?.message || 'Access denied to this order conversation.');
     });
 
     return () => {
@@ -124,7 +139,7 @@ const ChatPage: React.FC = () => {
   // ── Send message ─────────────────────────────────────────────────────────
   const handleSend = async () => {
     const text = newMessage.trim();
-    if (!text || !orderId) return;
+    if (!text || !orderId || isSending) return;
 
     setIsSending(true);
     try {
@@ -152,7 +167,7 @@ const ChatPage: React.FC = () => {
     }
   };
 
-  // ── Group messages by day ─────────────────────────────────────────────────
+  // Group messages by day
   const grouped: { day: string; msgs: ChatMessage[] }[] = [];
   messages.forEach((msg) => {
     const day = dayLabel(msg.created_at);
@@ -163,242 +178,241 @@ const ChatPage: React.FC = () => {
     }
   });
 
-  // ── Styles ────────────────────────────────────────────────────────────────
-  const s = {
-    page: {
-      maxWidth: '720px',
-      margin: '0 auto',
-      display: 'flex',
-      flexDirection: 'column' as const,
-      height: 'calc(100vh - 120px)',
-      fontFamily: "'Inter', sans-serif",
-    },
-    header: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '12px',
-      padding: '16px 0 12px',
-      borderBottom: '1px solid #e2e8f0',
-      marginBottom: '0',
-    },
-    backBtn: {
-      background: 'none',
-      border: 'none',
-      cursor: 'pointer',
-      fontSize: '20px',
-      color: '#6366f1',
-      padding: '4px 8px',
-      borderRadius: '8px',
-      transition: 'background 0.15s',
-    },
-    title: {
-      flex: 1,
-      margin: 0,
-      fontSize: '18px',
-      fontWeight: 700,
-      color: '#1e293b',
-    },
-    orderId: {
-      fontSize: '12px',
-      color: '#94a3b8',
-      fontFamily: 'monospace',
-    },
-    chatBody: {
-      flex: 1,
-      overflowY: 'auto' as const,
-      padding: '16px 4px',
-      display: 'flex',
-      flexDirection: 'column' as const,
-      gap: '4px',
-    },
-    dayBadge: {
-      textAlign: 'center' as const,
-      margin: '12px 0 4px',
-      fontSize: '11px',
-      fontWeight: 600,
-      color: '#94a3b8',
-      letterSpacing: '0.05em',
-      textTransform: 'uppercase' as const,
-    },
-    bubble: (isMine: boolean): React.CSSProperties => ({
-      alignSelf: isMine ? 'flex-end' : 'flex-start',
-      maxWidth: '75%',
-      background: isMine ? '#111827' : '#f1f5f9',
-      color: isMine ? '#fff' : '#1e293b',
-      borderRadius: isMine ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-      padding: '10px 14px',
-      fontSize: '14px',
-      lineHeight: 1.5,
-      boxShadow: isMine
-        ? '0 2px 8px rgba(17,24,39,0.18)'
-        : '0 2px 8px rgba(0,0,0,0.06)',
-      marginBottom: '2px',
-    }),
-    bubbleMeta: (isMine: boolean): React.CSSProperties => ({
-      fontSize: '11px',
-      color: isMine ? '#9ca3af' : '#94a3b8',
-      marginTop: '4px',
-      textAlign: isMine ? 'right' : 'left',
-    }),
-    senderName: {
-      fontWeight: 600,
-      marginBottom: '2px',
-      fontSize: '12px',
-      color: '#111827',
-    },
-    inputRow: {
-      display: 'flex',
-      alignItems: 'flex-end',
-      gap: '10px',
-      padding: '12px 0 8px',
-      borderTop: '1px solid #e2e8f0',
-    },
-    textarea: {
-      flex: 1,
-      resize: 'none' as const,
-      border: '1.5px solid #e2e8f0',
-      borderRadius: '14px',
-      padding: '10px 14px',
-      fontSize: '14px',
-      fontFamily: "'Inter', sans-serif",
-      outline: 'none',
-      lineHeight: 1.5,
-      maxHeight: '120px',
-      minHeight: '44px',
-      background: '#f8fafc',
-      transition: 'border-color 0.15s',
-      color: '#1e293b',
-    },
-    sendBtn: {
-      background: '#111827',
-      color: '#fff',
-      border: 'none',
-      borderRadius: '14px',
-      padding: '10px 20px',
-      cursor: 'pointer',
-      fontWeight: 700,
-      fontSize: '14px',
-      height: '44px',
-      whiteSpace: 'nowrap' as const,
-      transition: 'background 0.15s, transform 0.1s',
-      flexShrink: 0,
-    },
-    empty: {
-      flex: 1,
-      display: 'flex',
-      flexDirection: 'column' as const,
-      alignItems: 'center',
-      justifyContent: 'center',
-      color: '#94a3b8',
-      gap: '8px',
-    },
-    errorBanner: {
-      background: '#fef2f2',
-      color: '#991b1b',
-      padding: '8px 14px',
-      borderRadius: '8px',
-      fontSize: '13px',
-      marginBottom: '8px',
-      textAlign: 'center' as const,
-    },
-  };
-
   return (
     <AppLayout>
-      <div style={s.page}>
-        {/* Header */}
-        <div style={s.header}>
-          <button style={s.backBtn} onClick={() => navigate(-1)} title="Go back">
-            ←
-          </button>
-          <div style={{ flex: 1 }}>
-            <h1 style={s.title}>Order Chat</h1>
-            <div style={s.orderId}>Order #{orderId?.slice(0, 8).toUpperCase()}</div>
-          </div>
-          <div
-            style={{
-              width: '10px',
-              height: '10px',
-              borderRadius: '50%',
-              background: '#22c55e',
-              boxShadow: '0 0 6px #22c55e',
-            }}
-            title="Live"
-          />
-        </div>
-
-        {error && <div style={s.errorBanner}>{error}</div>}
-
-        {/* Chat body */}
-        <div style={s.chatBody}>
-          {grouped.length === 0 ? (
-            <div style={s.empty}>
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-              </svg>
-              <p style={{ fontWeight: 600, color: '#374151' }}>No messages yet</p>
-              <p style={{ fontSize: '13px', color: '#9ca3af' }}>Say hi to coordinate your meetup!</p>
+      <div className="page chat-page" style={{ maxWidth: 840, margin: '0 auto', display: 'flex', flexDirection: 'column', height: 'calc(100vh - 110px)' }}>
+        {/* Header Card */}
+        <Card
+          padded
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '12px 18px',
+            marginBottom: 12,
+            flexShrink: 0,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button
+              onClick={() => navigate(-1)}
+              className="btn btn-ghost btn-sm"
+              style={{ padding: '6px 8px' }}
+              aria-label="Back"
+            >
+              <IconArrowLeft size={16} />
+            </button>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <h1 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: 'var(--ink)' }}>
+                  Order Chat
+                </h1>
+                <Badge color="brand">#{orderId?.slice(0, 8).toUpperCase()}</Badge>
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                Coordinate meetup location and schedule on campus
+              </div>
             </div>
-          ) : (
-            grouped.map((group) => (
-              <div key={group.day}>
-                <div style={s.dayBadge}>{group.day}</div>
-                {group.msgs.map((msg) => {
-                  const isMine = msg.sender_id === myId;
-                  return (
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                fontSize: 11,
+                fontWeight: 600,
+                color: socketConnected ? 'var(--success-strong)' : 'var(--text-faint)',
+              }}
+            >
+              <span
+                style={{
+                  width: 7,
+                  height: 7,
+                  borderRadius: '50%',
+                  background: socketConnected ? 'var(--success)' : 'var(--text-faint)',
+                }}
+              />
+              {socketConnected ? 'Live' : 'Connecting'}
+            </span>
+          </div>
+        </Card>
+
+        {error && (
+          <div style={{ marginBottom: 10, flexShrink: 0 }}>
+            <ErrorBanner message={error} onRetry={() => setError('')} />
+          </div>
+        )}
+
+        {/* Messages Body Card */}
+        <Card
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: '20px 24px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 16,
+            background: 'var(--surface-soft)',
+          }}
+        >
+          {loadingHistory && (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}>
+              <Spinner size={24} />
+            </div>
+          )}
+
+          {!loadingHistory && messages.length === 0 && (
+            <div style={{ margin: 'auto', textAlign: 'center', color: 'var(--text-muted)' }}>
+              <div
+                style={{
+                  width: 50,
+                  height: 50,
+                  borderRadius: 14,
+                  background: 'var(--brand-soft)',
+                  color: 'var(--brand)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 12px',
+                }}
+              >
+                <IconMessageCircle size={24} />
+              </div>
+              <div style={{ fontWeight: 600, fontSize: 15, color: 'var(--ink)' }}>No messages yet</div>
+              <p style={{ fontSize: 13, margin: '4px 0 0', maxWidth: 280 }}>
+                Say hello to coordinate campus handoff details!
+              </p>
+            </div>
+          )}
+
+          {grouped.map(({ day, msgs }) => (
+            <div key={day} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {/* Day divider */}
+              <div style={{ textAlign: 'center', margin: '4px 0' }}>
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: 'var(--text-muted)',
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
+                    padding: '3px 12px',
+                    borderRadius: 'var(--radius-full)',
+                  }}
+                >
+                  {day}
+                </span>
+              </div>
+
+              {msgs.map((m) => {
+                const isMe = myId ? m.sender_id === myId : false;
+
+                return (
+                  <div
+                    key={m.id}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: isMe ? 'flex-end' : 'flex-start',
+                      maxWidth: '75%',
+                      alignSelf: isMe ? 'flex-end' : 'flex-start',
+                    }}
+                  >
+                    {!isMe && (
+                      <span
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color: 'var(--text-secondary)',
+                          marginBottom: 3,
+                          paddingLeft: 4,
+                        }}
+                      >
+                        {m.sender_name || 'Campus Peer'}
+                      </span>
+                    )}
+
                     <div
-                      key={msg.id}
                       style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: isMine ? 'flex-end' : 'flex-start',
-                        marginBottom: '6px',
+                        padding: '10px 14px',
+                        borderRadius: isMe ? '14px 14px 2px 14px' : '14px 14px 14px 2px',
+                        background: isMe ? 'var(--brand)' : 'var(--surface)',
+                        color: isMe ? '#ffffff' : 'var(--ink)',
+                        border: isMe ? 'none' : '1px solid var(--border)',
+                        boxShadow: 'var(--shadow-xs)',
+                        wordBreak: 'break-word',
+                        fontSize: 14,
+                        lineHeight: 1.45,
                       }}
                     >
-                      {!isMine && (
-                        <div style={s.senderName}>
-                          {msg.sender_name}{' '}
-                          <span style={{ fontWeight: 400, color: '#94a3b8', fontSize: '11px' }}>
-                            ({msg.sender_role})
-                          </span>
-                        </div>
-                      )}
-                      <div style={s.bubble(isMine)}>{msg.message}</div>
-                      <div style={s.bubbleMeta(isMine)}>{formatTime(msg.created_at)}</div>
+                      {m.message}
                     </div>
-                  );
-                })}
-              </div>
-            ))
-          )}
-          <div ref={bottomRef} />
-        </div>
 
-        {/* Input row */}
-        <div style={s.inputRow}>
+                    <span
+                      style={{
+                        fontSize: 10,
+                        color: 'var(--text-faint)',
+                        marginTop: 3,
+                        padding: '0 4px',
+                      }}
+                    >
+                      {formatTime(m.created_at)}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+
+          <div ref={bottomRef} />
+        </Card>
+
+        {/* Input Bar Card */}
+        <Card
+          padded
+          style={{
+            marginTop: 10,
+            padding: '10px 14px',
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+          }}
+        >
           <textarea
             ref={inputRef}
-            style={s.textarea}
-            placeholder="Type a message… (Enter to send, Shift+Enter for newline)"
+            rows={1}
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             onKeyDown={handleKeyDown}
-            rows={1}
-            maxLength={1000}
-          />
-          <button
-            id="chat-send-btn"
+            placeholder="Type your message... (Enter to send, Shift+Enter for new line)"
+            className="input"
             style={{
-              ...s.sendBtn,
-              opacity: isSending || !newMessage.trim() ? 0.6 : 1,
-              cursor: isSending || !newMessage.trim() ? 'not-allowed' : 'pointer',
+              flex: 1,
+              resize: 'none',
+              padding: '10px 12px',
+              height: 42,
+              maxHeight: 100,
+              fontSize: 14,
+              border: 'none',
+              background: 'var(--surface-soft)',
             }}
+          />
+
+          <Button
+            variant="primary"
+            size="md"
+            icon="send"
+            disabled={!newMessage.trim() || isSending}
+            loading={isSending}
             onClick={handleSend}
-            disabled={isSending || !newMessage.trim()}
+            id="chat-send-btn"
           >
-            {isSending ? '…' : 'Send'}
-          </button>
-        </div>
+            Send
+          </Button>
+        </Card>
       </div>
     </AppLayout>
   );

@@ -2,6 +2,7 @@
 // LAVSA — Cart Page
 // Shows the user's cart with payment method selection (Offline / Online).
 // After checkout, shows the 6-digit delivery OTP to the buyer.
+// Redesigned with the LAVSA design system (global.css + UI kit).
 // ============================================================
 
 import React, { useState, useEffect } from 'react';
@@ -10,6 +11,17 @@ import AppLayout from '../../components/Layout/AppLayout';
 import { useCart } from '../../context/CartContext';
 import { useToast } from '../../context/ToastContext';
 import api from '../../services/api';
+import { Button, Card, EmptyState, PageHeader, PageLoader, ErrorBanner } from '../../components/UI/ui';
+import {
+  IconMinus,
+  IconPlus,
+  IconTrash,
+  IconCheck,
+  IconMapPin,
+  IconShield,
+  IconShoppingBag,
+} from '../../components/UI/Icons';
+import { formatPrice } from '../../utils/format';
 
 interface CheckoutOrder {
   orderId: string;
@@ -32,8 +44,8 @@ const CartPage: React.FC = () => {
   const [meetupLocation, setMeetupLocation] = useState('Campus Central Library Gate');
   const [meetupTime, setMeetupTime] = useState('Tomorrow (4:00 PM - 5:30 PM)');
   const [meetupNotes, setMeetupNotes] = useState('');
-  // After checkout succeeds — show OTP modal
   const [completedOrder, setCompletedOrder] = useState<CheckoutOrder | null>(null);
+  const [copiedOtp, setCopiedOtp] = useState(false);
 
   useEffect(() => {
     if (checkoutError) {
@@ -117,7 +129,7 @@ const CartPage: React.FC = () => {
             },
           },
           theme: {
-            color: '#2563eb',
+            color: '#4f46e5',
           },
         };
 
@@ -142,6 +154,14 @@ const CartPage: React.FC = () => {
     }
   };
 
+  const handleCopyOtp = () => {
+    if (!completedOrder?.deliveryOtp) return;
+    navigator.clipboard.writeText(completedOrder.deliveryOtp);
+    setCopiedOtp(true);
+    showToast('OTP copied to clipboard!', 'success');
+    setTimeout(() => setCopiedOtp(false), 2000);
+  };
+
   const handleOtpDismiss = () => {
     setCompletedOrder(null);
     navigate('/orders');
@@ -149,194 +169,294 @@ const CartPage: React.FC = () => {
 
   return (
     <AppLayout>
-      <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-        {/* Header */}
-        <div style={headerRowStyle}>
-          <div>
-            <h1 style={headingStyle}>🛒 My Cart</h1>
-            <p style={subStyle}>
-              {totalCount > 0
-                ? `${totalCount} item${totalCount !== 1 ? 's' : ''} · ₹${totalPrice.toFixed(2)} total`
-                : 'Your cart is empty'}
-            </p>
-          </div>
-          {items.length > 0 && (
-            <button style={clearBtnStyle} onClick={clearCart} id="clear-cart-btn">
-              Clear Cart
-            </button>
-          )}
-        </div>
+      <div className="page cart-page" style={{ maxWidth: 1040, margin: '0 auto' }}>
+        <PageHeader
+          title="Shopping Cart"
+          subtitle={
+            totalCount > 0
+              ? `${totalCount} item${totalCount !== 1 ? 's' : ''} in your cart`
+              : 'Your cart is currently empty'
+          }
+          icon="cart"
+          actions={
+            items.length > 0 ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                icon="trash"
+                onClick={clearCart}
+                id="clear-cart-btn"
+              >
+                Clear Cart
+              </Button>
+            ) : undefined
+          }
+        />
 
-        {isLoading && (
-          <div style={centerStyle}>
-            <div style={spinnerStyle} />
-            <p style={{ color: '#6b7280', marginTop: '12px' }}>Loading your cart...</p>
-          </div>
-        )}
+        {isLoading && <PageLoader label="Loading your cart..." />}
 
         {!isLoading && items.length === 0 && (
-          <div style={emptyStyle}>
-            <span style={{ fontSize: '64px' }}>🛒</span>
-            <h2 style={{ color: '#374151', margin: '16px 0 8px 0' }}>Your cart is empty</h2>
-            <p style={{ color: '#9ca3af', fontSize: '14px', marginBottom: '24px' }}>
-              Browse products and add items you like!
-            </p>
-            <Link to="/" style={shopNowBtnStyle} id="shop-now-btn">
-              Shop Now
-            </Link>
-          </div>
+          <EmptyState
+            icon="cart"
+            title="Your cart is empty"
+            description="Explore textbooks, gadgets, and campus essentials from fellow students."
+            action={
+              <Link to="/home" className="btn btn-primary" id="shop-now-btn">
+                Browse Campus Products
+              </Link>
+            }
+          />
         )}
 
         {!isLoading && items.length > 0 && (
-          <div style={cartLayoutStyle}>
-            {/* Cart items */}
-            <div style={itemsColStyle}>
+          <div className="cart-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 24, alignItems: 'start' }}>
+            {/* Cart Items List */}
+            <div className="cart-items" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {items.map((item) => (
-                <div key={item.cart_item_id} style={cartItemStyle} id={`cart-item-${item.cart_item_id}`}>
-                  <div style={itemImageWrapStyle}>
-                    {item.image_url ? (
-                      <img src={item.image_url} alt={item.title} style={itemImageStyle} />
-                    ) : (
-                      <div style={itemNoImageStyle}>📦</div>
-                    )}
-                  </div>
+                <Card key={item.cart_item_id} padded className="cart-item-card" id={`cart-item-${item.cart_item_id}`}>
+                  <div style={{ display: 'flex', gap: 16 }}>
+                    {/* Thumbnail */}
+                    <div
+                      style={{
+                        width: 96,
+                        height: 96,
+                        borderRadius: 'var(--radius-sm)',
+                        overflow: 'hidden',
+                        background: 'var(--surface-muted)',
+                        flexShrink: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      {item.image_url ? (
+                        <img
+                          src={item.image_url}
+                          alt={item.title}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                      ) : (
+                        <IconShoppingBag size={28} color="var(--text-faint)" />
+                      )}
+                    </div>
 
-                  <div style={itemDetailsStyle}>
-                    <Link to={`/products/${item.product_id}`} style={itemTitleStyle}>
-                      {item.title}
-                    </Link>
-                    <div style={itemSellerStyle}>Sold by {item.seller_name}</div>
-                    <div style={itemPriceStyle}>₹{Number(item.price).toFixed(2)}</div>
+                    {/* Details */}
+                    <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                          <Link
+                            to={`/products/${item.product_id}`}
+                            style={{
+                              fontWeight: 600,
+                              fontSize: 15,
+                              color: 'var(--ink)',
+                              textDecoration: 'none',
+                            }}
+                            className="truncate-2"
+                          >
+                            {item.title}
+                          </Link>
+                          <button
+                            onClick={() => removeFromCart(item.cart_item_id)}
+                            id={`remove-item-${item.cart_item_id}`}
+                            title="Remove item"
+                            className="btn btn-ghost btn-sm"
+                            style={{ padding: 4, color: 'var(--text-muted)' }}
+                          >
+                            <IconTrash size={16} />
+                          </button>
+                        </div>
+                        <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
+                          Sold by {item.seller_name}
+                        </div>
+                      </div>
 
-                    <div style={quantityRowStyle}>
-                      <button
-                        onClick={() =>
-                          item.quantity > 1
-                            ? updateQuantity(item.cart_item_id, item.quantity - 1)
-                            : removeFromCart(item.cart_item_id)
-                        }
-                        style={qtyBtnStyle}
-                        id={`qty-dec-${item.cart_item_id}`}
-                      >
-                        −
-                      </button>
-                      <span style={qtyValueStyle}>{item.quantity}</span>
-                      <button
-                        onClick={() => updateQuantity(item.cart_item_id, item.quantity + 1)}
-                        style={qtyBtnStyle}
-                        disabled={item.quantity >= item.stock}
-                        id={`qty-inc-${item.cart_item_id}`}
-                      >
-                        +
-                      </button>
-                      <span style={itemSubtotalStyle}>
-                        Subtotal: ₹{(Number(item.price) * item.quantity).toFixed(2)}
-                      </span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
+                        {/* Stepper */}
+                        <div className="pd-stepper" style={{ height: 32 }}>
+                          <button
+                            onClick={() =>
+                              item.quantity > 1
+                                ? updateQuantity(item.cart_item_id, item.quantity - 1)
+                                : removeFromCart(item.cart_item_id)
+                            }
+                            className="pd-step-btn"
+                            id={`qty-dec-${item.cart_item_id}`}
+                            aria-label="Decrease quantity"
+                          >
+                            <IconMinus size={13} />
+                          </button>
+                          <span className="pd-qty-value" style={{ minWidth: 26, fontSize: 13 }}>
+                            {item.quantity}
+                          </span>
+                          <button
+                            onClick={() => updateQuantity(item.cart_item_id, item.quantity + 1)}
+                            className="pd-step-btn"
+                            disabled={item.quantity >= item.stock}
+                            id={`qty-inc-${item.cart_item_id}`}
+                            aria-label="Increase quantity"
+                          >
+                            <IconPlus size={13} />
+                          </button>
+                        </div>
+
+                        {/* Price & Subtotal */}
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--ink)' }}>
+                            {formatPrice(Number(item.price) * item.quantity)}
+                          </div>
+                          {item.quantity > 1 && (
+                            <div style={{ fontSize: 11, color: 'var(--text-faint)' }}>
+                              {formatPrice(Number(item.price))} each
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
-
-                  <button
-                    onClick={() => removeFromCart(item.cart_item_id)}
-                    style={removeItemBtnStyle}
-                    id={`remove-item-${item.cart_item_id}`}
-                    title="Remove item"
-                  >
-                    ✕
-                  </button>
-                </div>
+                </Card>
               ))}
             </div>
 
-            {/* Order Summary */}
-            <div style={summaryStyle}>
-              <h2 style={summaryHeadingStyle}>Order Summary</h2>
+            {/* Order Summary & Checkout */}
+            <div className="cart-sidebar" style={{ position: 'sticky', top: 24 }}>
+              <Card padded className="cart-summary-card">
+                <h2 style={{ fontSize: 17, fontWeight: 700, margin: '0 0 16px 0', color: 'var(--ink)' }}>
+                  Order Summary
+                </h2>
 
-              <div style={summaryRowStyle}>
-                <span style={{ color: '#6b7280', fontSize: '14px' }}>
-                  Subtotal ({totalCount} item{totalCount !== 1 ? 's' : ''})
-                </span>
-                <span style={{ color: '#111827', fontWeight: '600' }}>₹{totalPrice.toFixed(2)}</span>
-              </div>
-              <div style={{ ...summaryRowStyle, borderTop: '1px solid #f3f4f6', paddingTop: '12px', marginTop: '4px' }}>
-                <span style={{ color: '#111827', fontWeight: '700', fontSize: '16px' }}>Total</span>
-                <span style={{ color: '#111827', fontWeight: '800', fontSize: '18px' }}>₹{totalPrice.toFixed(2)}</span>
-              </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10, fontSize: 14 }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>
+                    Subtotal ({totalCount} item{totalCount !== 1 ? 's' : ''})
+                  </span>
+                  <span style={{ fontWeight: 600, color: 'var(--ink)' }}>{formatPrice(totalPrice)}</span>
+                </div>
 
-              {/* Payment method selector */}
-              <div style={paymentSectionStyle}>
-                <p style={paymentLabelStyle}>Select Payment Method</p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '10px' }}>
-                  {/* Option 1: Cash at Meetup */}
-                  <div
-                    id="pay-offline-btn"
-                    onClick={() => setPaymentMethod('OFFLINE')}
-                    style={payMethodCardStyle(paymentMethod === 'OFFLINE')}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div style={{
-                        width: '16px',
-                        height: '16px',
-                        borderRadius: '50%',
-                        border: paymentMethod === 'OFFLINE' ? '5px solid #111827' : '2px solid #d1d5db',
-                        backgroundColor: '#ffffff',
-                        boxSizing: 'border-box',
-                        flexShrink: 0,
-                      }} />
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontSize: '13px', fontWeight: '700', color: '#111827' }}>Cash at Campus Meetup</span>
-                          <span style={{ fontSize: '10px', fontWeight: '600', backgroundColor: '#f3f4f6', color: '#111827', padding: '2px 6px', borderRadius: '4px' }}>Recommended</span>
-                        </div>
-                        <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>
-                          Pay cash upon receiving item · Verify with 6-digit OTP
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 14, fontSize: 14 }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Campus Handover Delivery</span>
+                  <span style={{ fontWeight: 600, color: 'var(--success-strong)' }}>Free</span>
+                </div>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    paddingTop: 14,
+                    borderTop: '1px solid var(--border)',
+                    marginBottom: 20,
+                  }}
+                >
+                  <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)' }}>Total</span>
+                  <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--brand-active)' }}>
+                    {formatPrice(totalPrice)}
+                  </span>
+                </div>
+
+                {/* Payment Method Selector */}
+                <div style={{ marginBottom: 18 }}>
+                  <label className="label" style={{ marginBottom: 8, display: 'block' }}>
+                    Payment Method
+                  </label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {/* Offline Cash */}
+                    <div
+                      id="pay-offline-btn"
+                      onClick={() => setPaymentMethod('OFFLINE')}
+                      style={{
+                        padding: '12px 14px',
+                        borderRadius: 'var(--radius-sm)',
+                        cursor: 'pointer',
+                        border: paymentMethod === 'OFFLINE' ? '2px solid var(--brand)' : '1px solid var(--border)',
+                        background: paymentMethod === 'OFFLINE' ? 'var(--brand-soft)' : 'var(--surface)',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div
+                          style={{
+                            width: 18,
+                            height: 18,
+                            borderRadius: '50%',
+                            border: paymentMethod === 'OFFLINE' ? '5px solid var(--brand)' : '2px solid var(--border-strong)',
+                            background: '#fff',
+                            flexShrink: 0,
+                          }}
+                        />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>Cash at Meetup</span>
+                            <span className="badge badge-green" style={{ fontSize: 10, padding: '1px 6px' }}>Recommended</span>
+                          </div>
+                          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                            Pay in cash or direct UPI upon receiving · Verify with OTP
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Option 2: Pay Online */}
-                  <div
-                    id="pay-online-btn"
-                    onClick={() => setPaymentMethod('ONLINE')}
-                    style={payMethodCardStyle(paymentMethod === 'ONLINE')}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div style={{
-                        width: '16px',
-                        height: '16px',
-                        borderRadius: '50%',
-                        border: paymentMethod === 'ONLINE' ? '5px solid #111827' : '2px solid #d1d5db',
-                        backgroundColor: '#ffffff',
-                        boxSizing: 'border-box',
-                        flexShrink: 0,
-                      }} />
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontSize: '13px', fontWeight: '700', color: '#111827' }}>Pay Online</span>
-                          <span style={{ fontSize: '10px', fontWeight: '600', backgroundColor: '#f3f4f6', color: '#111827', padding: '2px 6px', borderRadius: '4px' }}>Instant Online</span>
-                        </div>
-                        <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>
-                          Cards, UPI, Google Pay & Net Banking via Razorpay
+                    {/* Online Razorpay */}
+                    <div
+                      id="pay-online-btn"
+                      onClick={() => setPaymentMethod('ONLINE')}
+                      style={{
+                        padding: '12px 14px',
+                        borderRadius: 'var(--radius-sm)',
+                        cursor: 'pointer',
+                        border: paymentMethod === 'ONLINE' ? '2px solid var(--brand)' : '1px solid var(--border)',
+                        background: paymentMethod === 'ONLINE' ? 'var(--brand-soft)' : 'var(--surface)',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div
+                          style={{
+                            width: 18,
+                            height: 18,
+                            borderRadius: '50%',
+                            border: paymentMethod === 'ONLINE' ? '5px solid var(--brand)' : '2px solid var(--border-strong)',
+                            background: '#fff',
+                            flexShrink: 0,
+                          }}
+                        />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>Pay Online</span>
+                            <span className="badge badge-brand" style={{ fontSize: 10, padding: '1px 6px' }}>Escrow Protected</span>
+                          </div>
+                          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                            UPI, Google Pay, PhonePe, Cards &amp; Netbanking
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Campus Meetup / Handover Details */}
-                <div style={{ backgroundColor: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px', marginTop: '10px' }}>
-                  <p style={{ fontSize: '12px', fontWeight: '700', color: '#111827', margin: '0 0 10px 0' }}>
-                    Campus Handover Spot & Time
-                  </p>
+                {/* Handover Details Section */}
+                <div
+                  style={{
+                    background: 'var(--surface-soft)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 'var(--radius-sm)',
+                    padding: 14,
+                    marginBottom: 18,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, fontWeight: 700, fontSize: 12, color: 'var(--ink)' }}>
+                    <IconMapPin size={14} color="var(--brand)" />
+                    Campus Handover Details
+                  </div>
 
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#4b5563', marginBottom: '4px' }}>
+                  <div style={{ marginBottom: 10 }}>
+                    <label htmlFor="meetup-location-select" className="label" style={{ fontSize: 11, marginBottom: 3 }}>
                       Meetup Spot on Campus
                     </label>
                     <select
                       id="meetup-location-select"
                       value={meetupLocation}
                       onChange={(e) => setMeetupLocation(e.target.value)}
-                      style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '12px', backgroundColor: '#ffffff', color: '#111827', marginBottom: '10px', outline: 'none' }}
+                      className="select"
+                      style={{ fontSize: 12, padding: '7px 10px' }}
                     >
                       <option value="Campus Central Library Gate">Campus Central Library Gate</option>
                       <option value="Student Activity Center (SAC)">Student Activity Center (SAC)</option>
@@ -345,228 +465,249 @@ const CartPage: React.FC = () => {
                       <option value="Hostel Block - Common Area">Hostel Block - Common Area</option>
                       <option value="Sports Complex / Ground">Sports Complex / Ground</option>
                     </select>
+                  </div>
 
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#4b5563', marginBottom: '4px' }}>
+                  <div style={{ marginBottom: 10 }}>
+                    <label htmlFor="meetup-time-select" className="label" style={{ fontSize: 11, marginBottom: 3 }}>
                       Preferred Meetup Time
                     </label>
                     <select
                       id="meetup-time-select"
                       value={meetupTime}
                       onChange={(e) => setMeetupTime(e.target.value)}
-                      style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '12px', backgroundColor: '#ffffff', color: '#111827', marginBottom: '10px', outline: 'none' }}
+                      className="select"
+                      style={{ fontSize: 12, padding: '7px 10px' }}
                     >
                       <option value="Today (4:30 PM - 6:00 PM)">Today (4:30 PM - 6:00 PM)</option>
                       <option value="Tomorrow (1:00 PM - 2:00 PM - Lunch)">Tomorrow (1:00 PM - 2:00 PM - Lunch)</option>
                       <option value="Tomorrow (4:00 PM - 5:30 PM)">Tomorrow (4:00 PM - 5:30 PM)</option>
                       <option value="Day After Tomorrow (4:00 PM - 5:30 PM)">Day After Tomorrow (4:00 PM - 5:30 PM)</option>
                     </select>
+                  </div>
 
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#4b5563', marginBottom: '4px' }}>
+                  <div>
+                    <label htmlFor="meetup-notes-input" className="label" style={{ fontSize: 11, marginBottom: 3 }}>
                       Note for Seller (Optional)
                     </label>
                     <input
                       id="meetup-notes-input"
                       type="text"
-                      placeholder="e.g. Near main stairs, wearing blue backpack..."
+                      placeholder="e.g. Near main stairs, wearing blue hoodie..."
                       value={meetupNotes}
                       onChange={(e) => setMeetupNotes(e.target.value)}
-                      style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '12px', backgroundColor: '#ffffff', color: '#111827', outline: 'none', boxSizing: 'border-box' }}
+                      className="input"
+                      style={{ fontSize: 12, padding: '7px 10px' }}
                     />
                   </div>
+                </div>
+
+                {checkoutError && (
+                  <div style={{ marginBottom: 14 }}>
+                    <ErrorBanner message={checkoutError} onRetry={() => setCheckoutError('')} />
+                  </div>
+                )}
+
+                <Button
+                  variant="primary"
+                  size="lg"
+                  block
+                  loading={isCheckingOut}
+                  onClick={handleCheckout}
+                  id="checkout-btn"
+                  iconRight="arrow-right"
+                >
+                  {isCheckingOut
+                    ? 'Processing Order…'
+                    : paymentMethod === 'OFFLINE'
+                    ? 'Place Order (Pay Cash at Meetup)'
+                    : 'Proceed to Pay Online'}
+                </Button>
+
+                <div style={{ textAlign: 'center', marginTop: 12 }}>
+                  <Link
+                    to="/home"
+                    id="continue-shopping-btn"
+                    style={{ fontSize: 13, color: 'var(--text-muted)', textDecoration: 'none' }}
+                  >
+                    ← Continue Shopping
+                  </Link>
+                </div>
+              </Card>
+            </div>
+          </div>
+        )}
+
+        {/* ── Delivery OTP Modal ── */}
+        {completedOrder && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              backgroundColor: 'rgba(17, 24, 39, 0.7)',
+              backdropFilter: 'blur(4px)',
+              zIndex: 1000,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 20,
+            }}
+          >
+            <div
+              className="slide-up"
+              style={{
+                backgroundColor: 'var(--surface)',
+                borderRadius: 'var(--radius-lg)',
+                padding: '32px 28px',
+                maxWidth: 440,
+                width: '100%',
+                textAlign: 'center',
+                boxShadow: 'var(--shadow-xl)',
+              }}
+            >
+              <div
+                style={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: 16,
+                  background: 'var(--success-soft)',
+                  color: 'var(--success-strong)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 16px',
+                }}
+              >
+                <IconCheck size={30} strokeWidth={2.4} />
               </div>
 
-              {checkoutError && (
-                <div style={checkoutErrorStyle}>
-                  <span>{checkoutError}</span>
-                  <button
-                    onClick={() => setCheckoutError('')}
-                    style={{ background: 'none', border: 'none', color: '#991b1b', cursor: 'pointer', fontWeight: 'bold' }}
-                    aria-label="Dismiss error"
-                  >
-                    ✕
-                  </button>
-                </div>
-              )}
+              <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--ink)', margin: '0 0 6px 0' }}>
+                Order Placed Successfully!
+              </h2>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '0 0 20px 0' }}>
+                {completedOrder.paymentMethod === 'OFFLINE'
+                  ? 'Pay cash or direct UPI to the seller during campus meetup.'
+                  : 'Payment initiated via Razorpay Escrow. Handover OTP below.'}
+              </p>
 
-              <button
-                style={{ ...checkoutBtnStyle, opacity: isCheckingOut ? 0.7 : 1 }}
-                id="checkout-btn"
-                onClick={handleCheckout}
-                disabled={isCheckingOut}
+              <div
+                style={{
+                  background: 'var(--surface-soft)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '16px 12px',
+                  marginBottom: 16,
+                }}
               >
-                {isCheckingOut
-                  ? 'Placing Order…'
-                  : paymentMethod === 'OFFLINE'
-                  ? 'Place Order (Pay Cash at Meetup) →'
-                  : 'Proceed to Pay Online →'}
-              </button>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 10 }}>
+                  Share this 6-Digit Delivery OTP with the seller at meetup:
+                </div>
+                <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginBottom: 12 }}>
+                  {completedOrder.deliveryOtp.split('').map((digit, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        width: 40,
+                        height: 50,
+                        borderRadius: 8,
+                        background: 'var(--ink)',
+                        color: '#fff',
+                        fontSize: 22,
+                        fontWeight: 800,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      {digit}
+                    </div>
+                  ))}
+                </div>
 
-              <Link to="/" style={continueLinkStyle} id="continue-shopping-btn">
-                ← Continue Shopping
-              </Link>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon={copiedOtp ? 'check' : 'copy'}
+                  onClick={handleCopyOtp}
+                >
+                  {copiedOtp ? 'Copied OTP' : 'Copy OTP'}
+                </Button>
+              </div>
+
+              <div
+                style={{
+                  fontSize: 12,
+                  color: 'var(--warning-strong)',
+                  background: 'var(--warning-soft)',
+                  border: '1px solid var(--warning-border)',
+                  borderRadius: 'var(--radius-sm)',
+                  padding: '10px 14px',
+                  textAlign: 'left',
+                  marginBottom: 16,
+                  display: 'flex',
+                  gap: 8,
+                  alignItems: 'flex-start',
+                }}
+              >
+                <IconShield size={16} color="var(--warning-strong)" style={{ flexShrink: 0, marginTop: 1 }} />
+                <span>
+                  <strong>Safety Notice:</strong> Only share this OTP <em>after</em> you have personally inspected and received the product.
+                </span>
+              </div>
+
+              <div
+                style={{
+                  background: 'var(--surface-muted)',
+                  borderRadius: 'var(--radius-sm)',
+                  padding: '10px 14px',
+                  textAlign: 'left',
+                  fontSize: 12,
+                  marginBottom: 20,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 4,
+                }}
+              >
+                <div style={{ color: 'var(--ink)' }}>
+                  📍 <strong>Meetup Spot:</strong> {completedOrder.meetupLocation || meetupLocation}
+                </div>
+                <div style={{ color: 'var(--ink)' }}>
+                  ⏰ <strong>Time:</strong> {completedOrder.meetupTime || meetupTime}
+                </div>
+                <div style={{ color: 'var(--brand-active)', fontWeight: 700, marginTop: 2 }}>
+                  Total: {formatPrice(Number(completedOrder.totalAmount))}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 10 }}>
+                <Button
+                  variant="primary"
+                  block
+                  icon="message"
+                  onClick={() => {
+                    const id = completedOrder.orderId;
+                    setCompletedOrder(null);
+                    navigate(`/chat/${id}`);
+                  }}
+                  id="otp-chat-btn"
+                >
+                  Chat with Seller
+                </Button>
+                <Button
+                  variant="secondary"
+                  block
+                  icon="shopping-bag"
+                  onClick={handleOtpDismiss}
+                  id="otp-done-btn"
+                >
+                  My Orders
+                </Button>
+              </div>
             </div>
           </div>
         )}
       </div>
-
-      {/* ── OTP Modal — shown after successful checkout ── */}
-      {completedOrder && (
-        <div style={otpOverlayStyle}>
-          <div style={otpModalStyle}>
-            <div style={{ fontSize: '40px', marginBottom: '12px' }}>🎉</div>
-            <h2 style={otpTitleStyle}>Order Placed!</h2>
-            <p style={otpSubStyle}>
-              {completedOrder.paymentMethod === 'OFFLINE'
-                ? 'Pay cash to the seller when you meet on campus.'
-                : 'Proceed with payment and confirm delivery with your OTP.'}
-            </p>
-
-            <p style={otpInstructStyle}>
-              Share this OTP with the seller <strong>after receiving your item</strong>:
-            </p>
-
-            {/* OTP Display */}
-            <div style={otpBoxStyle}>
-              {completedOrder.deliveryOtp.split('').map((digit, i) => (
-                <div key={i} style={otpDigitStyle}>{digit}</div>
-              ))}
-            </div>
-
-            <p style={otpWarningStyle}>
-              ⚠️ Share this code <strong>only after</strong> you have received your items. The seller will enter it to confirm delivery.
-            </p>
-
-            <div style={{ backgroundColor: '#f9fafb', borderRadius: '10px', border: '1px solid #e5e7eb', padding: '10px 14px', margin: '0 0 16px 0', textAlign: 'left', fontSize: '12px' }}>
-              <div style={{ color: '#1f2937', marginBottom: '4px' }}>
-                📍 <strong>Meetup Spot:</strong> {completedOrder.meetupLocation || meetupLocation}
-              </div>
-              <div style={{ color: '#1f2937' }}>
-                ⏰ <strong>When:</strong> {completedOrder.meetupTime || meetupTime}
-              </div>
-            </div>
-
-            <div style={otpAmountStyle}>
-              Total: <strong>₹{Number(completedOrder.totalAmount).toFixed(2)}</strong>
-            </div>
-
-            <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
-              <button
-                id="otp-chat-btn"
-                onClick={() => {
-                  const id = completedOrder.orderId;
-                  setCompletedOrder(null);
-                  navigate(`/chat/${id}`);
-                }}
-                style={{
-                  flex: 1,
-                  padding: '12px',
-                  borderRadius: '8px',
-                  backgroundColor: '#111827',
-                  color: '#ffffff',
-                  border: 'none',
-                  fontSize: '13px',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  transition: 'background-color 0.15s ease',
-                }}
-              >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                </svg>
-                Chat with Seller
-              </button>
-              <button
-                id="otp-done-btn"
-                onClick={handleOtpDismiss}
-                style={{
-                  ...otpDoneBtn,
-                  flex: 1,
-                  margin: 0,
-                  fontSize: '13px',
-                }}
-              >
-                View My Orders
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-        #clear-cart-btn:hover { background-color: #fee2e2 !important; color: #dc2626 !important; }
-        #checkout-btn:hover:not(:disabled) { background-color: #374151 !important; }
-        #shop-now-btn:hover { background-color: #374151 !important; }
-        #otp-done-btn:hover { background-color: #374151 !important; }
-        #otp-chat-btn:hover { background-color: #374151 !important; }
-        #pay-offline-btn:hover, #pay-online-btn:hover { opacity: 0.85; }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-      `}</style>
     </AppLayout>
   );
 };
-
-// ── Styles ────────────────────────────────────────────────────────────────────
-
-const headingStyle: React.CSSProperties = { color: '#111827', fontSize: '24px', fontWeight: '700', margin: '0 0 4px 0' };
-const subStyle: React.CSSProperties = { color: '#6b7280', fontSize: '14px', margin: 0 };
-const headerRowStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '24px' };
-const clearBtnStyle: React.CSSProperties = { padding: '8px 16px', borderRadius: '8px', border: '1px solid #e5e7eb', backgroundColor: '#ffffff', color: '#6b7280', fontSize: '13px', cursor: 'pointer', fontFamily: "'Inter', system-ui, sans-serif", transition: 'all 0.15s ease' };
-const centerStyle: React.CSSProperties = { textAlign: 'center', padding: '60px 0' };
-const spinnerStyle: React.CSSProperties = { width: '32px', height: '32px', border: '3px solid #e5e7eb', borderTop: '3px solid #111827', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto' };
-const emptyStyle: React.CSSProperties = { textAlign: 'center', padding: '60px 0' };
-const shopNowBtnStyle: React.CSSProperties = { display: 'inline-block', padding: '12px 28px', borderRadius: '8px', backgroundColor: '#111827', color: '#ffffff', fontSize: '14px', fontWeight: '600', textDecoration: 'none', transition: 'background-color 0.15s ease' };
-const cartLayoutStyle: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 300px', gap: '24px', alignItems: 'start' };
-const itemsColStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '12px' };
-const cartItemStyle: React.CSSProperties = { display: 'flex', gap: '16px', backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '16px', position: 'relative' };
-const itemImageWrapStyle: React.CSSProperties = { width: '90px', height: '90px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0 };
-const itemImageStyle: React.CSSProperties = { width: '100%', height: '100%', objectFit: 'cover' };
-const itemNoImageStyle: React.CSSProperties = { width: '100%', height: '100%', backgroundColor: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px' };
-const itemDetailsStyle: React.CSSProperties = { flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' };
-const itemTitleStyle: React.CSSProperties = { color: '#111827', fontWeight: '600', fontSize: '14px', textDecoration: 'none' };
-const itemSellerStyle: React.CSSProperties = { color: '#9ca3af', fontSize: '12px' };
-const itemPriceStyle: React.CSSProperties = { color: '#111827', fontWeight: '700', fontSize: '15px', marginTop: '2px' };
-const quantityRowStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: '10px', marginTop: '8px' };
-const qtyBtnStyle: React.CSSProperties = { width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #e5e7eb', backgroundColor: '#f9fafb', color: '#374151', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Inter', system-ui, sans-serif" };
-const qtyValueStyle: React.CSSProperties = { fontSize: '14px', fontWeight: '600', color: '#111827', minWidth: '20px', textAlign: 'center' };
-const itemSubtotalStyle: React.CSSProperties = { fontSize: '12px', color: '#6b7280', marginLeft: '4px' };
-const removeItemBtnStyle: React.CSSProperties = { position: 'absolute', top: '12px', right: '12px', width: '24px', height: '24px', borderRadius: '50%', border: '1px solid #e5e7eb', backgroundColor: '#f9fafb', color: '#9ca3af', fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Inter', system-ui, sans-serif" };
-const summaryStyle: React.CSSProperties = { backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px', position: 'sticky', top: '24px' };
-const summaryHeadingStyle: React.CSSProperties = { fontSize: '16px', fontWeight: '700', color: '#111827', margin: '0 0 16px 0', paddingBottom: '12px', borderBottom: '1px solid #f3f4f6' };
-const summaryRowStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' };
-const checkoutBtnStyle: React.CSSProperties = { display: 'block', width: '100%', padding: '12px', borderRadius: '8px', border: 'none', backgroundColor: '#111827', color: '#ffffff', fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginTop: '16px', fontFamily: "'Inter', system-ui, sans-serif", transition: 'background-color 0.15s ease' };
-const continueLinkStyle: React.CSSProperties = { display: 'block', textAlign: 'center', marginTop: '12px', fontSize: '13px', color: '#6b7280', textDecoration: 'none' };
-const checkoutErrorStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', borderRadius: '8px', backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', fontSize: '13px', marginBottom: '12px' };
-
-// Payment method styles
-const paymentSectionStyle: React.CSSProperties = { marginTop: '16px', paddingTop: '14px', borderTop: '1px solid #f3f4f6' };
-const paymentLabelStyle: React.CSSProperties = { fontSize: '13px', fontWeight: '600', color: '#374151', margin: '0 0 8px 0' };
-const payMethodCardStyle = (active: boolean): React.CSSProperties => ({
-  padding: '10px 12px',
-  borderRadius: '10px',
-  cursor: 'pointer',
-  transition: 'all 0.15s ease',
-  fontFamily: "'Inter', system-ui, sans-serif",
-  border: active ? '2px solid #059669' : '1px solid #e5e7eb',
-  backgroundColor: active ? '#f0fdf4' : '#ffffff',
-  boxShadow: active ? '0 1px 3px rgba(5, 150, 105, 0.1)' : 'none',
-});
-
-// OTP Modal styles
-const otpOverlayStyle: React.CSSProperties = { position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' };
-const otpModalStyle: React.CSSProperties = { backgroundColor: '#ffffff', borderRadius: '16px', padding: '36px 32px', maxWidth: '420px', width: '100%', textAlign: 'center', animation: 'fadeIn 0.25s ease', fontFamily: "'Inter', system-ui, sans-serif" };
-const otpTitleStyle: React.CSSProperties = { fontSize: '22px', fontWeight: '800', color: '#111827', margin: '0 0 8px 0' };
-const otpSubStyle: React.CSSProperties = { fontSize: '13px', color: '#6b7280', margin: '0 0 20px 0', lineHeight: '1.5' };
-const otpInstructStyle: React.CSSProperties = { fontSize: '13px', color: '#374151', margin: '0 0 16px 0' };
-const otpBoxStyle: React.CSSProperties = { display: 'flex', gap: '8px', justifyContent: 'center', margin: '0 0 16px 0' };
-const otpDigitStyle: React.CSSProperties = { width: '44px', height: '56px', borderRadius: '10px', backgroundColor: '#111827', color: '#ffffff', fontSize: '24px', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center', letterSpacing: '0' };
-const otpWarningStyle: React.CSSProperties = { fontSize: '12px', color: '#92400e', backgroundColor: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '10px 12px', margin: '0 0 14px 0', lineHeight: '1.5' };
-const otpAmountStyle: React.CSSProperties = { fontSize: '14px', color: '#374151', margin: '0 0 20px 0' };
-const otpDoneBtn: React.CSSProperties = { width: '100%', padding: '12px', borderRadius: '8px', border: 'none', backgroundColor: '#111827', color: '#ffffff', fontSize: '14px', fontWeight: '700', cursor: 'pointer', fontFamily: "'Inter', system-ui, sans-serif", transition: 'background-color 0.15s ease' };
 
 export default CartPage;

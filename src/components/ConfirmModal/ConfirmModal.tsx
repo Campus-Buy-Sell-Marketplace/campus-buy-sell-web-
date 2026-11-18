@@ -4,6 +4,7 @@
 // ============================================================
 
 import React, { useState, useEffect } from 'react';
+import { IconAlertTriangle, IconAlertCircle, IconX } from '../UI/Icons';
 
 export interface ConfirmModalProps {
   isOpen: boolean;
@@ -58,11 +59,25 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
       >
         <div style={headerStyle}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '22px' }}>{isDanger ? '⚠️' : '❓'}</span>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 34,
+                height: 34,
+                borderRadius: 10,
+                background: isDanger ? 'var(--danger-soft, #fef2f2)' : 'var(--warning-soft, #fffbeb)',
+                color: isDanger ? 'var(--danger-strong, #dc2626)' : 'var(--warning-strong, #d97706)',
+                flexShrink: 0,
+              }}
+            >
+              {isDanger ? <IconAlertTriangle size={18} /> : <IconAlertCircle size={18} />}
+            </span>
             <h3 id="confirm-modal-title" style={titleStyle}>{title}</h3>
           </div>
           <button onClick={onCancel} style={closeBtnStyle} aria-label="Close modal">
-            ✕
+            <IconX size={15} />
           </button>
         </div>
 

@@ -1,5 +1,7 @@
 // ============================================================
 // LAVSA — Admin Users & Seller Verification Page
+// Review seller applications, moderate status, and manage roles.
+// Redesigned with the LAVSA design system (global.css + UI kit).
 // ============================================================
 
 import React, { useEffect, useState } from 'react';
@@ -14,18 +16,19 @@ import {
   AdminUser,
   SellerApplication,
 } from '../../services/adminService';
+import { Button, Card, Badge, PageHeader, PageLoader, ErrorBanner } from '../../components/UI/ui';
+import {
+  IconUsers,
+  IconStore,
+  IconSearch,
+} from '../../components/UI/Icons';
+import { formatDate } from '../../utils/format';
 
-const ROLE_COLORS: Record<string, string> = {
-  STUDENT:     '#2563eb',
-  SELLER:      '#059669',
-  ADMIN:       '#7c3aed',
-  SUPER_ADMIN: '#dc2626',
-};
-
-const STATUS_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  PENDING:  { bg: '#fffbeb', text: '#b45309', border: '#fde68a' },
-  APPROVED: { bg: '#f0fdf4', text: '#15803d', border: '#bbf7d0' },
-  REJECTED: { bg: '#fef2f2', text: '#b91c1c', border: '#fecaca' },
+const ROLE_COLORS: Record<string, 'blue' | 'green' | 'brand' | 'red'> = {
+  STUDENT: 'blue',
+  SELLER: 'green',
+  ADMIN: 'brand',
+  SUPER_ADMIN: 'red',
 };
 
 const AdminUsersPage: React.FC = () => {
@@ -40,7 +43,6 @@ const AdminUsersPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL');
   const [rejectingAppId, setRejectingAppId] = useState<string | null>(null);
 
-  // Auto-dismiss error after 4 seconds
   useEffect(() => {
     if (error) {
       const timer = setTimeout(() => setError(''), 4000);
@@ -59,7 +61,6 @@ const AdminUsersPage: React.FC = () => {
       setUsers(fetchedUsers);
       setApplications(fetchedApps);
 
-      // Default to applications tab if there are pending applications, otherwise users
       const hasPending = fetchedApps.some((a) => a.status === 'PENDING');
       if (!hasPending && fetchedApps.length === 0) {
         setActiveTab('users');
@@ -76,7 +77,6 @@ const AdminUsersPage: React.FC = () => {
     loadData();
   }, []);
 
-  // Quick toggle role directly on users table
   const handleToggleRole = async (user: AdminUser) => {
     const newRole = user.role === 'STUDENT' ? 'SELLER' : 'STUDENT';
     setUpdatingId(user.id);
@@ -84,7 +84,6 @@ const AdminUsersPage: React.FC = () => {
       const updated = await updateUserRole(user.id, newRole);
       setUsers((prev) => prev.map((u) => (u.id === updated.id ? { ...u, role: updated.role } : u)));
       showToast(`Role updated to ${newRole} for ${user.name}.`, 'success');
-      // Also refresh applications list if affected
       const apps = await fetchSellerApplications();
       setApplications(apps);
     } catch {
@@ -94,7 +93,6 @@ const AdminUsersPage: React.FC = () => {
     }
   };
 
-  // Handle application decision (Approve or Reject)
   const handleApplicationDecision = async (appId: string, status: 'APPROVED' | 'REJECTED', notes?: string) => {
     setUpdatingId(appId);
     try {
@@ -102,7 +100,6 @@ const AdminUsersPage: React.FC = () => {
       setApplications((prev) =>
         prev.map((a) => (a.id === updatedApp.id ? { ...a, ...updatedApp } : a))
       );
-      // Reload users to reflect new role immediately
       const updatedUsers = await fetchUsers();
       setUsers(updatedUsers);
       showToast(`Application ${status.toLowerCase()} successfully.`, 'success');
@@ -135,55 +132,64 @@ const AdminUsersPage: React.FC = () => {
 
   return (
     <AppLayout>
-      <div style={{ maxWidth: '1080px', margin: '0 auto', fontFamily: "'Inter', system-ui, sans-serif" }}>
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
-          <div>
-            <h1 style={headingStyle}>User & Seller Management</h1>
-            <p style={subStyle}>
-              Verify seller applications and manage user permissions — live from PostgreSQL
-            </p>
-          </div>
-          <button style={refreshBtnStyle} onClick={loadData} title="Refresh data">
-            🔄 Refresh
-          </button>
-        </div>
+      <div className="page admin-users-page" style={{ maxWidth: 1080, margin: '0 auto' }}>
+        <PageHeader
+          title="User &amp; Seller Management"
+          subtitle="Review seller applications and manage user permissions in PostgreSQL"
+          icon="users"
+          actions={
+            <Button variant="secondary" size="sm" icon="refresh" onClick={loadData}>
+              Refresh
+            </Button>
+          }
+        />
 
         {/* Tab Switcher */}
-        <div style={tabContainerStyle}>
+        <div style={{ display: 'flex', gap: 10, borderBottom: '1px solid var(--border)', marginBottom: 18, paddingBottom: 2 }}>
           <button
-            style={tabButtonStyle(activeTab === 'applications')}
+            type="button"
+            className={`nav-pill ${activeTab === 'applications' ? 'nav-pill-active' : ''}`}
             onClick={() => setActiveTab('applications')}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', border: 'none', background: 'transparent' }}
           >
-            📋 Seller Applications
+            <IconStore size={15} />
+            Seller Applications
             {pendingCount > 0 && (
-              <span style={pendingBadgeStyle}>{pendingCount} Pending</span>
+              <Badge color="amber">{pendingCount} Pending</Badge>
             )}
           </button>
           <button
-            style={tabButtonStyle(activeTab === 'users')}
+            type="button"
+            className={`nav-pill ${activeTab === 'users' ? 'nav-pill-active' : ''}`}
             onClick={() => setActiveTab('users')}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', border: 'none', background: 'transparent' }}
           >
-            👥 All Users ({users.length})
+            <IconUsers size={15} />
+            All Users ({users.length})
           </button>
         </div>
 
-        {/* Search bar */}
-        <div style={{ display: 'flex', gap: '12px', marginBottom: '18px' }}>
-          <input
-            style={searchStyle}
-            placeholder={
-              activeTab === 'applications'
-                ? 'Search by student name, shop name, email, phone…'
-                : 'Search users by name or email…'
-            }
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+        {/* Search & Filter Bar */}
+        <div style={{ display: 'flex', gap: 12, marginBottom: 18, flexWrap: 'wrap' }}>
+          <div style={{ position: 'relative', flex: 1, minWidth: 240 }}>
+            <IconSearch size={16} style={{ position: 'absolute', left: 12, top: 12, color: 'var(--text-faint)' }} />
+            <input
+              className="input"
+              style={{ paddingLeft: 36 }}
+              placeholder={
+                activeTab === 'applications'
+                  ? 'Search by student name, shop name, email, phone…'
+                  : 'Search users by name or email…'
+              }
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
 
           {activeTab === 'applications' && (
             <select
-              style={selectStyle}
+              className="select"
+              style={{ width: 'auto', minWidth: 150 }}
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as any)}
             >
@@ -195,117 +201,148 @@ const AdminUsersPage: React.FC = () => {
           )}
         </div>
 
-        {loading && <p style={{ color: '#6b7280', fontSize: '14px' }}>Loading data from database…</p>}
-        {error && <p style={{ color: '#dc2626', fontSize: '14px' }}>⚠️ {error}</p>}
+        {loading && <PageLoader label="Loading administrative records..." />}
+        {error && <ErrorBanner message={error} onRetry={loadData} />}
 
         {/* ── TAB 1: SELLER APPLICATIONS ── */}
         {!loading && !error && activeTab === 'applications' && (
           <div>
             {filteredApplications.length === 0 ? (
-              <div style={emptyCardStyle}>
-                <span style={{ fontSize: '40px' }}>📭</span>
-                <p style={{ color: '#6b7280', margin: '8px 0 0 0', fontWeight: '500' }}>
-                  No seller applications found.
+              <Card padded style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--text-muted)' }}>
+                <div style={{ fontWeight: 600, fontSize: 15, color: 'var(--ink)' }}>No seller applications found</div>
+                <p style={{ margin: '4px 0 0', fontSize: 13 }}>
+                  When students apply to sell on campus, their shop details and phone numbers appear here for review.
                 </p>
-                <p style={{ color: '#9ca3af', fontSize: '13px', margin: '4px 0 0 0' }}>
-                  When students apply to become sellers on campus, their shop details and phone numbers will appear here for verification.
-                </p>
-              </div>
+              </Card>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {filteredApplications.map((app) => {
-                  const statusStyle = STATUS_COLORS[app.status] || STATUS_COLORS.PENDING;
                   const isUpdating = updatingId === app.id;
+                  const isPending = app.status === 'PENDING';
 
                   return (
-                    <div key={app.id} style={appCardStyle(app.status === 'PENDING')}>
-                      {/* Top Header of Card */}
-                      <div style={appCardHeaderStyle}>
+                    <Card
+                      key={app.id}
+                      padded
+                      style={{
+                        border: isPending ? '1.5px solid var(--warning-border)' : '1px solid var(--border)',
+                        background: isPending ? 'var(--warning-soft)' : 'var(--surface)',
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'flex-start',
+                          gap: 16,
+                          marginBottom: 14,
+                          flexWrap: 'wrap',
+                        }}
+                      >
                         <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <span style={shopNameStyle}>🏪 {app.business_name}</span>
-                            <span
-                              style={{
-                                ...statusBadgeStyle,
-                                backgroundColor: statusStyle.bg,
-                                color: statusStyle.text,
-                                border: `1px solid ${statusStyle.border}`,
-                              }}
-                            >
-                              {app.status === 'PENDING' ? '⏳ PENDING REVIEW' : app.status}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)' }}>
+                              {app.business_name}
                             </span>
+                            <Badge
+                              color={
+                                app.status === 'APPROVED' ? 'green' : app.status === 'REJECTED' ? 'red' : 'amber'
+                              }
+                            >
+                              {app.status}
+                            </Badge>
                           </div>
-                          <div style={applicantSubStyle}>
-                            By <strong>{app.user_name}</strong> · 
-                            <span style={{ color: '#6b7280' }}> {app.user_email}</span> · 
-                            <span> Applied {new Date(app.created_at).toLocaleDateString()}</span>
+                          <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
+                            By <strong>{app.user_name}</strong> · {app.user_email} · Applied on {formatDate(app.created_at)}
                           </div>
                         </div>
 
                         {/* Action buttons */}
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                           {app.status === 'PENDING' && (
                             <>
-                              <button
-                                style={approveBtnStyle}
+                              <Button
+                                variant="success"
+                                size="sm"
+                                icon="check"
                                 disabled={isUpdating}
                                 onClick={() => handleApplicationDecision(app.id, 'APPROVED')}
                               >
-                                {isUpdating ? '…' : '✅ Verify & Approve'}
-                              </button>
-                              <button
-                                style={rejectBtnStyle}
+                                Approve
+                              </Button>
+                              <Button
+                                variant="danger-soft"
+                                size="sm"
+                                icon="x"
                                 disabled={isUpdating}
                                 onClick={() => setRejectingAppId(app.id)}
                               >
-                                {isUpdating ? '…' : '❌ Reject'}
-                              </button>
+                                Reject
+                              </Button>
                             </>
                           )}
 
                           {app.status === 'APPROVED' && (
-                            <button
-                              style={revokeBtnStyle}
+                            <Button
+                              variant="secondary"
+                              size="sm"
                               disabled={isUpdating}
                               onClick={() => setRejectingAppId(app.id)}
                             >
-                              {isUpdating ? '…' : 'Revoke Seller'}
-                            </button>
+                              Revoke Seller
+                            </Button>
                           )}
 
                           {app.status === 'REJECTED' && (
-                            <button
-                              style={approveBtnStyle}
+                            <Button
+                              variant="success"
+                              size="sm"
                               disabled={isUpdating}
                               onClick={() => handleApplicationDecision(app.id, 'APPROVED')}
                             >
-                              {isUpdating ? '…' : 'Re-Approve'}
-                            </button>
+                              Re-Approve
+                            </Button>
                           )}
                         </div>
                       </div>
 
                       {/* Details Box */}
-                      <div style={appDetailsBoxStyle}>
-                        <div style={{ flex: 2 }}>
-                          <span style={detailLabelStyle}>📦 WHAT THEY PLAN TO SELL:</span>
-                          <p style={detailTextStyle}>{app.description}</p>
+                      <div
+                        style={{
+                          background: 'var(--surface)',
+                          border: '1px solid var(--border)',
+                          borderRadius: 'var(--radius-sm)',
+                          padding: '12px 16px',
+                          display: 'flex',
+                          gap: 16,
+                          fontSize: 13,
+                          flexWrap: 'wrap',
+                        }}
+                      >
+                        <div style={{ flex: 2, minWidth: 200 }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                            Items to Sell:
+                          </span>
+                          <p style={{ margin: '4px 0 0', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                            {app.description}
+                          </p>
                         </div>
-                        <div style={{ flex: 1, borderLeft: '1px solid #e5e7eb', paddingLeft: '16px' }}>
-                          <span style={detailLabelStyle}>📞 CONTACT / WHATSAPP:</span>
-                          <p style={{ ...detailTextStyle, fontWeight: '600', color: '#1f2937' }}>
+                        <div style={{ flex: 1, minWidth: 150, borderLeft: '1px solid var(--border)', paddingLeft: 16 }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                            Contact:
+                          </span>
+                          <p style={{ margin: '4px 0 0', fontWeight: 600, color: 'var(--ink)' }}>
                             {app.contact_number}
                           </p>
                         </div>
                       </div>
 
-                      {/* Admin note (if rejected) */}
                       {app.admin_notes && (
-                        <div style={adminNoteStyle}>
+                        <div style={{ marginTop: 10, fontSize: 12, color: 'var(--danger-strong)', background: 'var(--danger-soft)', padding: '8px 12px', borderRadius: 6 }}>
                           <strong>Admin Feedback:</strong> {app.admin_notes}
                         </div>
                       )}
-                    </div>
+                    </Card>
                   );
                 })}
               </div>
@@ -315,89 +352,87 @@ const AdminUsersPage: React.FC = () => {
 
         {/* ── TAB 2: ALL USERS ── */}
         {!loading && !error && activeTab === 'users' && (
-          <div style={cardStyle}>
+          <Card padded>
             {filteredUsers.length === 0 ? (
-              <p style={{ color: '#9ca3af', margin: 0 }}>No users found.</p>
+              <p style={{ color: 'var(--text-muted)', margin: 0 }}>No users found matching query.</p>
             ) : (
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
-                    <th style={thStyle}>Name</th>
-                    <th style={thStyle}>Email</th>
-                    <th style={thStyle}>Role</th>
-                    <th style={thStyle}>Joined</th>
-                    <th style={thStyle}>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredUsers.map((user) => {
-                    const userApp = applications.find((a) => a.user_id === user.id);
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ borderBottom: '2px solid var(--border)', color: 'var(--text-muted)' }}>
+                      <th style={{ padding: '10px 12px' }}>Name</th>
+                      <th style={{ padding: '10px 12px' }}>Email</th>
+                      <th style={{ padding: '10px 12px' }}>Role</th>
+                      <th style={{ padding: '10px 12px' }}>Joined</th>
+                      <th style={{ padding: '10px 12px' }}>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredUsers.map((user) => {
+                      const userApp = applications.find((a) => a.user_id === user.id);
+                      const roleColor = ROLE_COLORS[user.role] || 'gray';
 
-                    return (
-                      <tr key={user.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                        <td style={tdStyle}>
-                          <div style={{ fontWeight: '600' }}>{user.name}</div>
-                          {userApp && userApp.status === 'PENDING' && (
-                            <span
-                              style={smallPendingBadgeStyle}
-                              onClick={() => {
-                                setActiveTab('applications');
-                                setSearch(user.email);
-                              }}
-                              title="Click to view seller application"
-                            >
-                              ⏳ App Pending
-                            </span>
-                          )}
-                        </td>
-                        <td style={{ ...tdStyle, color: '#6b7280' }}>{user.email}</td>
-                        <td style={tdStyle}>
-                          <span
-                            style={{
-                              backgroundColor: (ROLE_COLORS[user.role] || '#374151') + '18',
-                              color: ROLE_COLORS[user.role] || '#374151',
-                              padding: '2px 10px',
-                              borderRadius: '999px',
-                              fontSize: '12px',
-                              fontWeight: '600',
-                            }}
-                          >
-                            {user.role}
-                          </span>
-                        </td>
-                        <td style={{ ...tdStyle, color: '#9ca3af' }}>
-                          {new Date(user.created_at).toLocaleDateString()}
-                        </td>
-                        <td style={tdStyle}>
-                          {/* Toggle for STUDENT ↔ SELLER */}
-                          {(user.role === 'STUDENT' || user.role === 'SELLER') && (
-                            <button
-                              style={btnStyle(user.role === 'STUDENT' ? '#059669' : '#dc2626')}
-                              disabled={updatingId === user.id}
-                              onClick={() => handleToggleRole(user)}
-                            >
-                              {updatingId === user.id
-                                ? '…'
-                                : user.role === 'STUDENT'
-                                ? 'Make Seller'
-                                : 'Revoke Seller'}
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                      return (
+                        <tr key={user.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                          <td style={{ padding: '12px' }}>
+                            <div style={{ fontWeight: 600, color: 'var(--ink)' }}>{user.name}</div>
+                            {userApp && userApp.status === 'PENDING' && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setActiveTab('applications');
+                                  setSearch(user.email);
+                                }}
+                                style={{
+                                  background: 'transparent',
+                                  border: 'none',
+                                  padding: 0,
+                                  cursor: 'pointer',
+                                  marginTop: 2,
+                                }}
+                              >
+                                <Badge color="amber">App Pending</Badge>
+                              </button>
+                            )}
+                          </td>
+                          <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>{user.email}</td>
+                          <td style={{ padding: '12px' }}>
+                            <Badge color={roleColor as any}>{user.role}</Badge>
+                          </td>
+                          <td style={{ padding: '12px', color: 'var(--text-muted)' }}>
+                            {formatDate(user.created_at)}
+                          </td>
+                          <td style={{ padding: '12px' }}>
+                            {(user.role === 'STUDENT' || user.role === 'SELLER') && (
+                              <Button
+                                variant={user.role === 'STUDENT' ? 'success' : 'danger-soft'}
+                                size="sm"
+                                disabled={updatingId === user.id}
+                                onClick={() => handleToggleRole(user)}
+                              >
+                                {updatingId === user.id
+                                  ? '…'
+                                  : user.role === 'STUDENT'
+                                  ? 'Make Seller'
+                                  : 'Revoke Seller'}
+                              </Button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             )}
-          </div>
+          </Card>
         )}
 
-        {/* In-Website Rejection Reason Modal */}
+        {/* Rejection Modal */}
         <ConfirmModal
           isOpen={!!rejectingAppId}
           title="Reject / Revoke Application"
-          message="Provide optional feedback or reason for rejecting/revoking this seller application:"
+          message="Provide optional feedback or reason for rejecting or revoking this seller application:"
           confirmLabel="Confirm Decision"
           cancelLabel="Cancel"
           isDanger={true}
@@ -414,116 +449,5 @@ const AdminUsersPage: React.FC = () => {
     </AppLayout>
   );
 };
-
-// ── Styles ─────────────────────────────────────────────────────────────────
-const headingStyle: React.CSSProperties = {
-  color: '#111827', fontSize: '24px', fontWeight: '800', margin: '0 0 4px 0', letterSpacing: '-0.02em',
-};
-const subStyle: React.CSSProperties = {
-  color: '#6b7280', fontSize: '14px', margin: 0,
-};
-const refreshBtnStyle: React.CSSProperties = {
-  padding: '8px 14px', backgroundColor: '#ffffff', border: '1px solid #e5e7eb',
-  borderRadius: '8px', fontSize: '13px', fontWeight: '600', color: '#374151',
-  cursor: 'pointer',
-};
-const tabContainerStyle: React.CSSProperties = {
-  display: 'flex', gap: '8px', borderBottom: '1px solid #e5e7eb',
-  marginBottom: '16px', paddingBottom: '2px',
-};
-const tabButtonStyle = (isActive: boolean): React.CSSProperties => ({
-  padding: '10px 18px', background: 'transparent', border: 'none',
-  borderBottom: isActive ? '2px solid #111827' : '2px solid transparent',
-  color: isActive ? '#111827' : '#6b7280',
-  fontWeight: isActive ? '700' : '500', fontSize: '14px',
-  cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
-});
-const pendingBadgeStyle: React.CSSProperties = {
-  backgroundColor: '#f59e0b', color: '#ffffff',
-  fontSize: '11px', fontWeight: '700', padding: '2px 8px',
-  borderRadius: '999px',
-};
-const searchStyle: React.CSSProperties = {
-  flex: 1, padding: '10px 14px', border: '1px solid #e5e7eb',
-  borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box',
-  outline: 'none',
-};
-const selectStyle: React.CSSProperties = {
-  padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: '8px',
-  fontSize: '13px', color: '#374151', backgroundColor: '#ffffff', cursor: 'pointer',
-};
-const cardStyle: React.CSSProperties = {
-  backgroundColor: '#ffffff', border: '1px solid #e5e7eb',
-  borderRadius: '12px', padding: '24px', overflowX: 'auto',
-  boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-};
-const appCardStyle = (isPending: boolean): React.CSSProperties => ({
-  backgroundColor: '#ffffff',
-  border: isPending ? '1.5px solid #fde68a' : '1px solid #e5e7eb',
-  borderRadius: '12px', padding: '20px 24px',
-  boxShadow: isPending ? '0 4px 12px rgba(245, 158, 11, 0.08)' : '0 1px 3px rgba(0,0,0,0.02)',
-});
-const appCardHeaderStyle: React.CSSProperties = {
-  display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-  gap: '16px', marginBottom: '14px', flexWrap: 'wrap',
-};
-const shopNameStyle: React.CSSProperties = {
-  fontSize: '17px', fontWeight: '700', color: '#111827',
-};
-const statusBadgeStyle: React.CSSProperties = {
-  fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '6px',
-};
-const applicantSubStyle: React.CSSProperties = {
-  fontSize: '13px', color: '#4b5563', marginTop: '4px',
-};
-const appDetailsBoxStyle: React.CSSProperties = {
-  backgroundColor: '#f9fafb', border: '1px solid #e5e7eb',
-  borderRadius: '8px', padding: '14px 16px', display: 'flex',
-  gap: '16px', fontSize: '13px',
-};
-const detailLabelStyle: React.CSSProperties = {
-  fontSize: '11px', fontWeight: '700', color: '#6b7280', letterSpacing: '0.04em',
-};
-const detailTextStyle: React.CSSProperties = {
-  margin: '4px 0 0 0', color: '#374151', lineHeight: '1.4',
-};
-const adminNoteStyle: React.CSSProperties = {
-  marginTop: '10px', fontSize: '12px', color: '#b91c1c',
-  backgroundColor: '#fef2f2', padding: '8px 12px', borderRadius: '6px',
-};
-const emptyCardStyle: React.CSSProperties = {
-  backgroundColor: '#ffffff', border: '1px solid #e5e7eb',
-  borderRadius: '12px', padding: '48px 24px', textAlign: 'center',
-};
-const approveBtnStyle: React.CSSProperties = {
-  padding: '7px 14px', fontSize: '12px', fontWeight: '700',
-  color: '#ffffff', backgroundColor: '#059669', border: 'none',
-  borderRadius: '6px', cursor: 'pointer',
-};
-const rejectBtnStyle: React.CSSProperties = {
-  padding: '7px 14px', fontSize: '12px', fontWeight: '600',
-  color: '#dc2626', backgroundColor: '#fee2e2', border: '1px solid #fecaca',
-  borderRadius: '6px', cursor: 'pointer',
-};
-const revokeBtnStyle: React.CSSProperties = {
-  padding: '6px 12px', fontSize: '12px', fontWeight: '600',
-  color: '#6b7280', backgroundColor: '#f3f4f6', border: '1px solid #e5e7eb',
-  borderRadius: '6px', cursor: 'pointer',
-};
-const smallPendingBadgeStyle: React.CSSProperties = {
-  display: 'inline-block', backgroundColor: '#fef3c7', color: '#92400e',
-  fontSize: '10px', fontWeight: '700', padding: '1px 6px', borderRadius: '4px',
-  marginTop: '3px', cursor: 'pointer',
-};
-const thStyle: React.CSSProperties = {
-  textAlign: 'left', padding: '10px 12px', color: '#6b7280',
-  fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em',
-};
-const tdStyle: React.CSSProperties = { padding: '12px', fontSize: '14px', color: '#111827' };
-const btnStyle = (color: string): React.CSSProperties => ({
-  padding: '5px 12px', fontSize: '12px', fontWeight: '600',
-  color: '#fff', backgroundColor: color, border: 'none',
-  borderRadius: '6px', cursor: 'pointer',
-});
 
 export default AdminUsersPage;

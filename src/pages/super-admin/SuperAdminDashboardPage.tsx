@@ -1,26 +1,26 @@
 // ============================================================
-// LAVSA — Super Admin Dashboard — Light Theme
+// LAVSA — Super Admin Dashboard
 // ============================================================
 
 import React from 'react';
 import AppLayout from '../../components/Layout/AppLayout';
+import { Card, PageHeader } from '../../components/UI/ui';
 
 const SuperAdminDashboardPage: React.FC = () => (
   <AppLayout>
-    <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-      <h1 style={headingStyle}>Super Admin Control Panel</h1>
-      <p style={subStyle}>System-level administration, admin roles, and global configuration</p>
-      <div style={cardStyle}>
-        <p style={{ color: '#9ca3af', margin: 0, fontSize: '14px' }}>
-          Super Admin system control overview — connect backend for live data.
+    <div className="page super-admin-dashboard" style={{ maxWidth: 1000, margin: '0 auto' }}>
+      <PageHeader
+        title="Super Admin Control Panel"
+        subtitle="System-level administration, security policies, and global configuration"
+        icon="shield"
+      />
+      <Card padded>
+        <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: 14 }}>
+          Super Admin control console. Manage campus administrators, oversee platform escrow, and configure global marketplace policies.
         </p>
-      </div>
+      </Card>
     </div>
   </AppLayout>
 );
-
-const headingStyle: React.CSSProperties = { color: '#111827', fontSize: '24px', fontWeight: '700', margin: '0 0 4px 0' };
-const subStyle: React.CSSProperties     = { color: '#6b7280', fontSize: '14px', margin: '0 0 24px 0' };
-const cardStyle: React.CSSProperties    = { backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '24px' };
 
 export default SuperAdminDashboardPage;
