@@ -7,6 +7,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import AppLayout from '../../components/Layout/AppLayout';
 import api from '../../services/api';
 import { Button, Card, Badge, EmptyState, PageHeader, PageLoader, ErrorBanner } from '../../components/UI/ui';
@@ -54,6 +55,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: 'amber' | 'blue' | '
 
 const OrdersPage: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -104,6 +106,11 @@ const OrdersPage: React.FC = () => {
         name: 'Campus Marketplace',
         description: `Order #${order.id.slice(0, 8).toUpperCase()}`,
         order_id: initRes.data.razorpayOrderId,
+        prefill: {
+          name: user?.name || 'Campus Student',
+          email: user?.email || 'student@campus.edu',
+          contact: (user as any)?.phone || '9999999999',
+        },
         handler: async function (response: any) {
           try {
             await api.post('/payments/verify', {

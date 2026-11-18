@@ -7,6 +7,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import AppLayout from '../../components/Layout/AppLayout';
 import { useCart } from '../../context/CartContext';
 import { useToast } from '../../context/ToastContext';
@@ -34,6 +35,7 @@ interface CheckoutOrder {
 
 const CartPage: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { showToast } = useToast();
   const { items, totalCount, totalPrice, isLoading, removeFromCart, updateQuantity, clearCart, refreshCart } =
     useCart();
@@ -97,6 +99,11 @@ const CartPage: React.FC = () => {
           name: 'Campus Marketplace',
           description: `Order #${order.orderId.slice(0, 8).toUpperCase()}`,
           order_id: initRes.data.razorpayOrderId,
+          prefill: {
+            name: user?.name || 'Campus Student',
+            email: user?.email || 'student@campus.edu',
+            contact: (user as any)?.phone || '9999999999',
+          },
           handler: async function (response: any) {
             try {
               setIsCheckingOut(true);
